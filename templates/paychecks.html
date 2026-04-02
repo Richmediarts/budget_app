@@ -1,0 +1,1214 @@
+{% extends "base.html" %}
+
+{% block title %}Paychecks - Budget Tracker{% endblock %}
+{% block page_title %}Paychecks & Paystubs{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        {% if edit_paycheck %}
+        <div class="alert alert-info mb-3">
+            <i class="bi bi-info-circle"></i> You are editing a paycheck. Make your changes below and click Save.
+            <a href="{{ url_for('paychecks') }}" class="btn btn-sm btn-outline-secondary ms-2">Cancel Edit</a>
+        </div>
+        {% endif %}
+        
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            {% if edit_paycheck %}
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#edit-paycheck" type="button">
+                    <i class="bi bi-pencil"></i> Edit Paycheck
+                </button>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+                <button class="nav-link{% if active_tab != 'import' and not edit_paycheck %} active{% endif %}" id="paystub-history-tab" data-bs-toggle="tab" data-bs-target="#paystub-history" type="button">
+                    <i class="bi bi-clock-history"></i> Paystub History
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link{% if active_tab == 'import' %} active{% endif %}" id="import-paycheck-tab" data-bs-toggle="tab" data-bs-target="#import-paycheck" type="button">
+                    <i class="bi bi-upload"></i> Import Paycheck
+                </button>
+            </li>
+        </ul>
+        
+        {% if edit_paycheck %}
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="edit-paycheck">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="bi bi-pencil"></i> Edit Paycheck - {{ edit_paycheck.check_date or edit_paycheck.pay_date }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('update_paycheck', id=edit_paycheck.id) }}" method="POST">
+                            <div class="row g-3">
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-person-badge"></i> Employee Information</h6></div>
+                                
+                                <div class="col-md-4">
+                                    <label class="form-label">Employee Name</label>
+                                    <input type="text" name="employee_name" class="form-control" value="{{ edit_paycheck.employee_name or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Company</label>
+                                    <input type="text" name="company" class="form-control" value="{{ edit_paycheck.company or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Employee ID</label>
+                                    <input type="text" name="employee_id" class="form-control" value="{{ edit_paycheck.employee_id or '' }}">
+                                </div>
+                                
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3 mt-3"><i class="bi bi-calendar"></i> Pay Period</h6></div>
+                                
+                                <div class="col-md-4">
+                                    <label class="form-label">Pay Period Begin</label>
+                                    <input type="date" name="pay_period_begin" class="form-control" value="{{ edit_paycheck.pay_period_begin or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Pay Period End</label>
+                                    <input type="date" name="pay_period_end" class="form-control" value="{{ edit_paycheck.pay_period_end or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Check Date</label>
+                                    <input type="date" name="check_date" class="form-control" value="{{ edit_paycheck.check_date or '' }}">
+                                </div>
+                                
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3 mt-3"><i class="bi bi-currency-dollar"></i> Summary</h6></div>
+                                
+                                <div class="col-md-2">
+                                    <label class="form-label">Hours Worked</label>
+                                    <input type="number" step="0.01" name="hours_worked" class="form-control" value="{{ edit_paycheck.hours_worked or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Gross Pay</label>
+                                    <input type="number" step="0.01" name="gross_pay" class="form-control" value="{{ edit_paycheck.gross_pay or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Net Pay</label>
+                                    <input type="number" step="0.01" name="net_pay" class="form-control" value="{{ edit_paycheck.net_pay or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Pre-Tax Ded.</label>
+                                    <input type="number" step="0.01" name="pre_tax_deductions" class="form-control" value="{{ edit_paycheck.pre_tax_deductions or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Emp. Taxes</label>
+                                    <input type="number" step="0.01" name="employee_taxes" class="form-control" value="{{ edit_paycheck.employee_taxes or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Post-Tax Ded.</label>
+                                    <input type="number" step="0.01" name="post_tax_deductions" class="form-control" value="{{ edit_paycheck.post_tax_deductions or '0' }}">
+                                </div>
+                                
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3 mt-3"><i class="bi bi-percent"></i> Taxes</h6></div>
+                                
+                                <div class="col-md-3">
+                                    <label class="form-label">Federal Tax</label>
+                                    <input type="number" step="0.01" name="federal_tax" class="form-control" value="{{ edit_paycheck.federal_tax or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">State Tax</label>
+                                    <input type="number" step="0.01" name="state_tax" class="form-control" value="{{ edit_paycheck.state_tax or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">OASDI</label>
+                                    <input type="number" step="0.01" name="oasdi" class="form-control" value="{{ edit_paycheck.oasdi or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Medicare</label>
+                                    <input type="number" step="0.01" name="medicare" class="form-control" value="{{ edit_paycheck.medicare or '0' }}">
+                                </div>
+                                
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3 mt-3"><i class="bi bi-bag"></i> Pre-Tax Deductions</h6></div>
+                                
+                                <div class="col-md-2">
+                                    <label class="form-label">401(k)</label>
+                                    <input type="number" step="0.01" name="retirement_401k" class="form-control" value="{{ edit_paycheck.retirement_401k or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Medical</label>
+                                    <input type="number" step="0.01" name="health_insurance" class="form-control" value="{{ edit_paycheck.health_insurance or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Dental</label>
+                                    <input type="number" step="0.01" name="dental_plan" class="form-control" value="{{ edit_paycheck.dental_plan or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Vision</label>
+                                    <input type="number" step="0.01" name="eye_plan" class="form-control" value="{{ edit_paycheck.eye_plan or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">FSA</label>
+                                    <input type="number" step="0.01" name="health_care_fsa" class="form-control" value="{{ edit_paycheck.health_care_fsa or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">HSA</label>
+                                    <input type="number" step="0.01" name="hsa" class="form-control" value="{{ edit_paycheck.hsa or '0' }}">
+                                </div>
+                                
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3 mt-3"><i class="bi bi-arrow-down-circle"></i> Post-Tax Deductions</h6></div>
+                                
+                                <div class="col-md-3">
+                                    <label class="form-label">Loan Repayment</label>
+                                    <input type="number" step="0.01" name="loan_repayment" class="form-control" value="{{ edit_paycheck.loan_repayment or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Stock Purchase</label>
+                                    <input type="number" step="0.01" name="stock_purchase" class="form-control" value="{{ edit_paycheck.stock_purchase or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Spousal Life</label>
+                                    <input type="number" step="0.01" name="spousal_life" class="form-control" value="{{ edit_paycheck.spousal_life or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Dependent Life</label>
+                                    <input type="number" step="0.01" name="dependent_life" class="form-control" value="{{ edit_paycheck.dependent_life or '0' }}">
+                                </div>
+                                
+                                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3 mt-3"><i class="bi bi-bank"></i> Direct Deposit</h6></div>
+                                
+                                <div class="col-md-4">
+                                    <label class="form-label">Bank Name</label>
+                                    <input type="text" name="bank_name" class="form-control" value="{{ edit_paycheck.bank_name or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Deposit Amount</label>
+                                    <input type="number" step="0.01" name="deposit_amount" class="form-control" value="{{ edit_paycheck.deposit_amount or '0' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Account Number</label>
+                                    <input type="text" name="account_number" class="form-control" value="{{ edit_paycheck.account_number or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Bank 2 Name</label>
+                                    <input type="text" name="bank2_name" class="form-control" value="{{ edit_paycheck.bank2_name or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Account 2 Number</label>
+                                    <input type="text" name="account2_number" class="form-control" value="{{ edit_paycheck.account2_number or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Deposit 2 Amount</label>
+                                    <input type="number" step="0.01" name="deposit2_amount" class="form-control" value="{{ edit_paycheck.deposit2_amount or '0' }}">
+                                </div>
+                                
+                                <div class="col-12 mt-4">
+                                    <hr>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="bi bi-save"></i> Save Changes
+                                    </button>
+                                    <a href="{{ url_for('paychecks') }}" class="btn btn-outline-secondary btn-lg ms-2">Cancel</a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {% if parsed_data %}
+        <div class="card paystub-preview mb-4" id="paystub-container">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-file-earmark-text"></i> Imported Paystub Preview</h5>
+                <span class="badge bg-warning text-dark">Not Yet Saved</span>
+            </div>
+            <div class="card-body" id="paystub-content">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Review the parsed data below, edit if needed, then click "Save Paycheck" to save.
+                </div>
+                <div class="preview-placeholder">
+                    <p><strong>Employee:</strong> {{ parsed_data.employee_name or 'N/A' }}</p>
+                    <p><strong>Company:</strong> {{ parsed_data.company or 'N/A' }}</p>
+                    <p><strong>Check Date:</strong> {{ parsed_data.check_date or 'N/A' }}</p>
+                    <p><strong>Gross Pay:</strong> ${{ "%.2f"|format(parsed_data.gross_pay|default(0)) }}</p>
+                    <p><strong>Net Pay:</strong> ${{ "%.2f"|format(parsed_data.net_pay|default(0)) }}</p>
+                    <p class="text-muted small">Full preview will appear after saving</p>
+                </div>
+            </div>
+        </div>
+        {% elif paychecks %}
+        <div class="card paystub-preview mb-4" id="paystub-container">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-file-earmark-text"></i> Paystub Preview</h5>
+                <select id="paystub-select" class="form-select" style="width: auto;" onchange="showPaystub(this.value)">
+                    {% for pc in paychecks %}
+                        <option value="{{ pc.id }}" {% if loop.first %}selected{% endif %}>{{ pc.check_date or pc.pay_date }} - {{ pc.employee_name or 'N/A' }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="card-body" id="paystub-content">
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="tab-content">
+            <div class="tab-pane fade{% if active_tab != 'import' %} show active{% endif %}" id="paystub-history">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-clock-history"></i> Paystub History</h5>
+                        <span class="badge bg-primary">{{ paychecks|length }} Paychecks</span>
+                    </div>
+                    <div class="card-body">
+                        {% if paychecks %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Check Date</th>
+                                            <th>Employee</th>
+                                            <th>Company</th>
+                                            <th>Gross</th>
+                                            <th>Net Pay</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pc in paychecks %}
+                                            <tr>
+                                                <td>{{ pc.check_date or pc.pay_date }}</td>
+                                                <td>{{ pc.employee_name or 'N/A' }}</td>
+                                                <td>{{ pc.company or 'N/A' }}</td>
+                                                <td class="fw-bold">${{ "%.2f"|format(pc.gross_pay or 0) }}</td>
+                                                <td class="text-success fw-bold">${{ "%.2f"|format(pc.net_pay or 0) }}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="showPaystub({{ pc.id }})">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </button>
+                                                    <a href="{{ url_for('edit_paycheck', id=pc.id) }}" class="btn btn-sm btn-outline-warning">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                    <a href="{{ url_for('delete_paycheck', id=pc.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this paycheck?')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center py-4">No paychecks recorded yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade{% if active_tab == 'import' %} show active{% endif %}" id="import-paycheck">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-upload"></i> Import Paycheck</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> <strong>Option 1:</strong> Upload a PDF paystub. <strong>Option 2:</strong> Copy text from your paystub and paste below. Both will be auto-parsed.
+                        </div>
+                        <form action="{{ url_for('import_paycheck') }}" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-file-pdf"></i> Upload PDF Paystub</label>
+                                <input type="file" name="pdf_file" class="form-control" accept=".pdf">
+                            </div>
+                            <div class="text-center my-2">
+                                <span class="badge bg-secondary">OR</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label"><i class="bi bi-clipboard"></i> Paste Paystub Text</label>
+                                <textarea name="raw_text" id="raw_text" class="form-control font-monospace" rows="10" placeholder="Paste your paystub text here...&#10;&#10;Example:&#10;Richard Johnson&#10;NCR Voyix Corporation&#10;02/14/2026 - 02/27/2026&#10;Gross Pay: $4,740.78&#10;Net Pay: $3,344.35&#10;...">{{ raw_text or '' }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-magic"></i> Parse & Preview
+                            </button>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h6><i class="bi bi-lightbulb"></i> Supported Formats</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2">The parser recognizes these formats:</p>
+                                <ul class="mb-0 small">
+                                    <li><strong>Dates:</strong> MM/DD/YYYY, YYYY-MM-DD, or text like "February 14, 2026"</li>
+                                    <li><strong>Money:</strong> $1,234.56 or 1,234.56</li>
+                                    <li><strong>Names:</strong> Full employee name</li>
+                                    <li><strong>Companies:</strong> Company/payor name</li>
+                                    <li><strong>Field labels:</strong> Gross Pay, Net Pay, Federal, State, Medicare, OASDI, 401k, Medical, etc.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if parsed_data %}
+                <div class="card mt-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="bi bi-check-circle"></i> Extracted Paycheck Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('save_imported_paycheck') }}" method="POST">
+                            <input type="hidden" name="parsed_json" value="{{ parsed_data|tojson }}">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Employee Name</label>
+                                    <input type="text" name="employee_name" class="form-control" value="{{ parsed_data.employee_name or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Company</label>
+                                    <input type="text" name="company" class="form-control" value="{{ parsed_data.company or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Employee ID</label>
+                                    <input type="text" name="employee_id" class="form-control" value="{{ parsed_data.employee_id or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Pay Period Begin</label>
+                                    <input type="date" name="pay_period_begin" class="form-control" value="{{ parsed_data.pay_period_begin or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Pay Period End</label>
+                                    <input type="date" name="pay_period_end" class="form-control" value="{{ parsed_data.pay_period_end or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Check Date</label>
+                                    <input type="date" name="check_date" class="form-control" value="{{ parsed_data.check_date or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Check Number</label>
+                                    <input type="text" name="check_number" class="form-control" value="{{ parsed_data.check_number or '' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Hours Worked</label>
+                                    <input type="number" step="0.01" name="hours_worked" class="form-control" value="{{ parsed_data.hours_worked or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Gross Pay</label>
+                                    <input type="number" step="0.01" name="gross_pay" class="form-control" value="{{ parsed_data.gross_pay or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Net Pay</label>
+                                    <input type="number" step="0.01" name="net_pay" class="form-control" value="{{ parsed_data.net_pay or '0' }}">
+                                </div>
+                                
+                                <div class="col-12"><hr><h6 class="text-success"><i class="bi bi-cash-stack"></i> Earnings Breakdown</h6></div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Salary</label>
+                                    <input type="number" step="0.01" name="salary" class="form-control" value="{{ parsed_data.salary or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Vacation Pay</label>
+                                    <input type="number" step="0.01" name="vacation_pay" class="form-control" value="{{ parsed_data.vacation_pay or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Holiday Pay</label>
+                                    <input type="number" step="0.01" name="holiday_pay" class="form-control" value="{{ parsed_data.holiday_pay or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Floating Holiday</label>
+                                    <input type="number" step="0.01" name="floating_holiday" class="form-control" value="{{ parsed_data.floating_holiday or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Biometric Credit</label>
+                                    <input type="number" step="0.01" name="biometric_credit" class="form-control" value="{{ parsed_data.biometric_credit or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Spousal Biometric</label>
+                                    <input type="number" step="0.01" name="spousal_biometric" class="form-control" value="{{ parsed_data.spousal_biometric or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Group Term Life</label>
+                                    <input type="number" step="0.01" name="group_term_life" class="form-control" value="{{ parsed_data.group_term_life or '0' }}">
+                                </div>
+                                
+                                <div class="col-12"><hr><h6 class="text-primary"><i class="bi bi-percent"></i> Taxes</h6></div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Federal Tax</label>
+                                    <input type="number" step="0.01" name="federal_tax" class="form-control" value="{{ parsed_data.federal_tax or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">State Tax</label>
+                                    <input type="number" step="0.01" name="state_tax" class="form-control" value="{{ parsed_data.state_tax or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">OASDI</label>
+                                    <input type="number" step="0.01" name="oasdi" class="form-control" value="{{ parsed_data.oasdi or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Medicare</label>
+                                    <input type="number" step="0.01" name="medicare" class="form-control" value="{{ parsed_data.medicare or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">401(k)</label>
+                                    <input type="number" step="0.01" name="retirement_401k" class="form-control" value="{{ parsed_data.retirement_401k or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Medical</label>
+                                    <input type="number" step="0.01" name="health_insurance" class="form-control" value="{{ parsed_data.health_insurance or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Dental</label>
+                                    <input type="number" step="0.01" name="dental_plan" class="form-control" value="{{ parsed_data.dental_plan or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Vision</label>
+                                    <input type="number" step="0.01" name="eye_plan" class="form-control" value="{{ parsed_data.eye_plan or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Pre-Tax Deductions</label>
+                                    <input type="number" step="0.01" name="pre_tax_deductions" class="form-control" value="{{ parsed_data.pre_tax_deductions or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Employee Taxes</label>
+                                    <input type="number" step="0.01" name="employee_taxes" class="form-control" value="{{ parsed_data.employee_taxes or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Post-Tax Deductions</label>
+                                    <input type="number" step="0.01" name="post_tax_deductions" class="form-control" value="{{ parsed_data.post_tax_deductions or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">FSA</label>
+                                    <input type="number" step="0.01" name="health_care_fsa" class="form-control" value="{{ parsed_data.health_care_fsa or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">HSA</label>
+                                    <input type="number" step="0.01" name="hsa" class="form-control" value="{{ parsed_data.hsa or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Employer Match</label>
+                                    <input type="number" step="0.01" name="employer_match" class="form-control" value="{{ parsed_data.employer_match or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Bank Name</label>
+                                    <input type="text" name="bank_name" class="form-control" value="{{ parsed_data.bank_name or '' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Deposit Amount</label>
+                                    <input type="number" step="0.01" name="deposit_amount" class="form-control" value="{{ parsed_data.deposit_amount or '0' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Account Number</label>
+                                    <input type="text" name="account_number" class="form-control" value="{{ parsed_data.account_number or '' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Loan Repayment</label>
+                                    <input type="number" step="0.01" name="loan_repayment" class="form-control" value="{{ parsed_data.loan_repayment or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Stock Purchase</label>
+                                    <input type="number" step="0.01" name="stock_purchase" class="form-control" value="{{ parsed_data.stock_purchase or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Spousal Life</label>
+                                    <input type="number" step="0.01" name="spousal_life" class="form-control" value="{{ parsed_data.spousal_life or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Dependent Life</label>
+                                    <input type="number" step="0.01" name="dependent_life" class="form-control" value="{{ parsed_data.dependent_life or '0' }}">
+                                </div>
+                                <div class="col-12"><hr><h6>Direct Deposit 2</h6></div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Bank 2 Name</label>
+                                    <input type="text" name="bank2_name" class="form-control" value="{{ parsed_data.bank2_name or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Account 2 Number</label>
+                                    <input type="text" name="account2_number" class="form-control" value="{{ parsed_data.account2_number or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Deposit 2 Amount</label>
+                                    <input type="number" step="0.01" name="deposit2_amount" class="form-control" value="{{ parsed_data.deposit2_amount or '0' }}">
+                                </div>
+                                <div class="col-12">
+                                    <hr>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="bi bi-save"></i> Save Paycheck
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const paychecks = {{ paychecks|tojson }};
+const parsedData = {{ parsed_data|tojson if parsed_data else 'null' }};
+const activeTab = {{ active_tab|tojson if active_tab else 'null' }};
+
+async function showPaystub(id) {
+    try {
+        const response = await fetch(`/api/payslip/${id}`);
+        const pc = await response.json();
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return parts[1] + '/' + parts[2] + '/' + parts[0];
+            }
+            return dateStr;
+        }
+        
+        function extractName(fullName) {
+            if (!fullName) return '—';
+            const parts = fullName.split(' ');
+            const nameParts = [];
+            for (const p of parts) {
+                if (p.match(/^[A-Z][a-z]+$/) || p === 'Jr.' || p === 'Sr.' || p === 'II' || p === 'III' || p === 'IV') {
+                    nameParts.push(p);
+                } else {
+                    break;
+                }
+            }
+            return nameParts.join(' ') || fullName;
+        }
+        
+        function fmtCurrency(val) {
+            return '$' + (val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        
+        const currentYear = new Date().getFullYear();
+        const ytdData = paychecks.reduce((acc, p) => {
+            if (p.check_date && p.check_date.startsWith(String(currentYear))) {
+                acc.hours += p.hours_worked || 0;
+                acc.gross += p.gross_pay || 0;
+                acc.pre_tax += p.pre_tax_deductions || 0;
+                acc.taxes += p.employee_taxes || 0;
+                acc.post_tax += p.post_tax_deductions || 0;
+                acc.net += p.net_pay || 0;
+                acc.salary += p.salary || 0;
+                acc.vacation_pay += p.vacation_pay || 0;
+                acc.holiday_pay += p.holiday_pay || 0;
+                acc.floating_holiday += p.floating_holiday || 0;
+                acc.biometric_credit += p.biometric_credit || 0;
+                acc.spousal_biometric += p.spousal_biometric || 0;
+                acc.group_term_life += p.group_term_life || 0;
+                acc.employer_match += p.employer_match || 0;
+                acc.oasdi += p.oasdi || 0;
+                acc.medicare += p.medicare || 0;
+                acc.federal_tax += p.federal_tax || 0;
+                acc.retirement_401k += p.retirement_401k || 0;
+            }
+            return acc;
+        }, { hours: 0, gross: 0, pre_tax: 0, taxes: 0, post_tax: 0, net: 0, salary: 0, vacation_pay: 0, holiday_pay: 0, floating_holiday: 0, biometric_credit: 0, spousal_biometric: 0, group_term_life: 0, employer_match: 0, oasdi: 0, medicare: 0, federal_tax: 0, retirement_401k: 0 });
+        
+        const vacationHours = 24;
+        const vacationRate = pc.vacation_pay && vacationHours ? (pc.vacation_pay / vacationHours) : 0;
+        
+        document.getElementById('paystub-content').innerHTML = `
+            <div class="paystub-preview">
+            <div class="page">
+              <div class="header">
+                <div class="logo-area">
+                  <div class="logo">NCR <span>V:YIX</span></div>
+                  <div class="co-address">864 Spring St NW, Atlanta, GA 30308<br>+1 (800) 225-5627</div>
+                </div>
+                <div class="doc-label">
+                  <div class="tag">Pay Statement</div>
+                  <div class="period">${formatDate(pc.check_date)}</div>
+                </div>
+              </div>
+              
+              <div class="identity-bar">
+                <div class="id-cell"><label>Employee Name</label><div class="val">${extractName(pc.employee_name)}</div></div>
+                <div class="id-cell"><label>Company</label><div class="val">${pc.company || 'NCR Voyix Corp.'}</div></div>
+                <div class="id-cell"><label>Employee ID</label><div class="val">${pc.employee_id || '—'}</div></div>
+                <div class="id-cell"><label>Period Begin</label><div class="val">${formatDate(pc.pay_period_begin)}</div></div>
+                <div class="id-cell"><label>Period End</label><div class="val">${formatDate(pc.pay_period_end)}</div></div>
+                <div class="id-cell"><label>Check Date</label><div class="val">${formatDate(pc.check_date)}</div></div>
+              </div>
+              
+              <div class="strip-header">
+                <div class="sh" style="text-align:left">Period</div>
+                <div class="sh">Hours Worked</div>
+                <div class="sh">Gross Pay</div>
+                <div class="sh">Pre-Tax Ded.</div>
+                <div class="sh">Emp. Taxes</div>
+                <div class="sh">Post-Tax Ded.</div>
+              </div>
+              
+              <div class="sum-row">
+                <div class="sc">Current</div>
+                <div class="sc">${(pc.hours_worked || 0).toFixed(2)}</div>
+                <div class="sc">${fmtCurrency(pc.gross_pay)}</div>
+                <div class="sc">${fmtCurrency(pc.pre_tax_deductions)}</div>
+                <div class="sc">${fmtCurrency(pc.employee_taxes)}</div>
+                <div class="sc">${fmtCurrency(pc.post_tax_deductions)}</div>
+              </div>
+              
+              <div class="strip-header">
+                <div class="sh" style="text-align:left; background:#1f1d1a">YTD</div>
+                <div class="sh" style="background:#1f1d1a">${ytdData.hours.toFixed(2)}</div>
+                <div class="sh" style="background:#1f1d1a">${fmtCurrency(ytdData.gross)}</div>
+                <div class="sh" style="background:#1f1d1a">${fmtCurrency(ytdData.pre_tax)}</div>
+                <div class="sh" style="background:#1f1d1a">${fmtCurrency(ytdData.taxes)}</div>
+                <div class="sh" style="background:#1f1d1a">${fmtCurrency(ytdData.post_tax)}</div>
+              </div>
+              
+              <div class="paystub-body">
+                <div class="net-hero">
+                  <div>
+                    <div class="label">Net Pay — Current Period</div>
+                    <div class="amount">${fmtCurrency(pc.net_pay)}</div>
+                  </div>
+                  <div class="ytd-note">
+                    Year-to-Date Net Pay
+                    <span>${fmtCurrency(ytdData.net)}</span>
+                  </div>
+                </div>
+                
+                <div class="section">
+                  <div class="section-head"><h2>Earnings</h2><div class="accent-line"></div></div>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Description</th>
+                        <th>Dates</th>
+                        <th>Hours</th>
+                        <th>Rate</th>
+                        <th>Amount</th>
+                        <th>YTD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${pc.salary ? `<tr>
+                        <td>Salary</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>${(pc.hours_worked || 0).toFixed(0)}</td>
+                        <td>—</td>
+                        <td>${fmtCurrency(pc.salary)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.salary)}</td>
+                      </tr>` : ''}
+                      ${pc.vacation_pay && pc.vacation_pay > 0 ? `<tr>
+                        <td>Vacation</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>${vacationHours}</td>
+                        <td>$${vacationRate.toFixed(4)}</td>
+                        <td>${fmtCurrency(pc.vacation_pay)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.vacation_pay)}</td>
+                      </tr>` : ''}
+                      ${pc.holiday_pay && pc.holiday_pay > 0 ? `<tr>
+                        <td>Holiday</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${fmtCurrency(pc.holiday_pay)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.holiday_pay)}</td>
+                      </tr>` : ''}
+                      ${pc.floating_holiday && pc.floating_holiday > 0 ? `<tr>
+                        <td>Floating Holiday</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${fmtCurrency(pc.floating_holiday)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.floating_holiday)}</td>
+                      </tr>` : ''}
+                      ${pc.biometric_credit && pc.biometric_credit > 0 ? `<tr>
+                        <td>Biometric Credit</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${fmtCurrency(pc.biometric_credit)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.biometric_credit)}</td>
+                      </tr>` : ''}
+                      ${pc.spousal_biometric && pc.spousal_biometric > 0 ? `<tr>
+                        <td>Spousal Biometric Credit</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${fmtCurrency(pc.spousal_biometric)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.spousal_biometric)}</td>
+                      </tr>` : ''}
+                      ${pc.group_term_life && pc.group_term_life > 0 ? `<tr>
+                        <td>Group Term Life</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${fmtCurrency(pc.group_term_life)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.group_term_life)}</td>
+                      </tr>` : ''}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td>Total Earnings</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>${fmtCurrency(pc.gross_pay)}</td>
+                        <td class="ytd-val">${fmtCurrency(ytdData.gross)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                
+                <div class="two-col">
+                  <div class="section">
+                    <div class="section-head"><h2>Pre-Tax Deductions</h2><div class="accent-line"></div><span class="chip chip-red">Pre-Tax</span></div>
+                    <table>
+                      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+                      <tbody>
+                        ${pc.retirement_401k ? `<tr><td>401k Savings Plan</td><td>${fmtCurrency(pc.retirement_401k)}</td></tr>` : ''}
+                        ${pc.health_insurance ? `<tr><td>Medical</td><td>${fmtCurrency(pc.health_insurance)}</td></tr>` : ''}
+                        ${pc.dental_plan ? `<tr><td>Dental Plan</td><td>${fmtCurrency(pc.dental_plan)}</td></tr>` : ''}
+                        ${pc.eye_plan ? `<tr><td>Eye Plan</td><td>${fmtCurrency(pc.eye_plan)}</td></tr>` : ''}
+                        ${pc.health_care_fsa ? `<tr><td>Health Care FSA</td><td>${fmtCurrency(pc.health_care_fsa)}</td></tr>` : ''}
+                        ${pc.optional_life ? `<tr><td>Optional Life</td><td>${fmtCurrency(pc.optional_life)}</td></tr>` : ''}
+                        ${pc.add_insurance ? `<tr><td>ADD Insurance</td><td>${fmtCurrency(pc.add_insurance)}</td></tr>` : ''}
+                      </tbody>
+                      <tfoot><tr><td>Total</td><td>${fmtCurrency(pc.pre_tax_deductions)}</td></tr></tfoot>
+                    </table>
+                  </div>
+                  
+                  <div class="section">
+                    <div class="section-head"><h2>Post-Tax Deductions</h2><div class="accent-line"></div><span class="chip chip-blue">Post-Tax</span></div>
+                    <table>
+                      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+                      <tbody>
+                        ${pc.loan_repayment ? `<tr><td>401K Loan Repayment</td><td>${fmtCurrency(pc.loan_repayment)}</td></tr>` : ''}
+                        ${pc.stock_purchase ? `<tr><td>Employee Stock Purchase</td><td>${fmtCurrency(pc.stock_purchase)}</td></tr>` : ''}
+                        ${pc.spousal_life ? `<tr><td>Spousal Life Insurance</td><td>${fmtCurrency(pc.spousal_life)}</td></tr>` : ''}
+                        ${pc.dependent_life ? `<tr><td>Dependent Life Insurance</td><td>${fmtCurrency(pc.dependent_life)}</td></tr>` : ''}
+                      </tbody>
+                      <tfoot><tr><td>Total</td><td>${fmtCurrency(pc.post_tax_deductions)}</td></tr></tfoot>
+                    </table>
+                  </div>
+                </div>
+                
+                <div class="section">
+                  <div class="section-head"><h2>Employee Taxes</h2><div class="accent-line"></div></div>
+                  <table>
+                    <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+                    <tbody>
+                      ${pc.federal_tax ? `<tr><td>Federal Withholding</td><td>${fmtCurrency(pc.federal_tax)}</td></tr>` : ''}
+                      ${pc.state_tax ? `<tr><td>State Tax - ${pc.state_name || 'GA'}</td><td>${fmtCurrency(pc.state_tax)}</td></tr>` : ''}
+                      ${pc.oasdi ? `<tr><td>OASDI</td><td>${fmtCurrency(pc.oasdi)}</td></tr>` : ''}
+                      ${pc.medicare ? `<tr><td>Medicare</td><td>${fmtCurrency(pc.medicare)}</td></tr>` : ''}
+                    </tbody>
+                    <tfoot><tr><td>Total Employee Taxes</td><td>${fmtCurrency(pc.employee_taxes)}</td></tr></tfoot>
+                  </table>
+                </div>
+                
+                <div class="section">
+                  <div class="section-head"><h2>Employer Paid Benefits</h2><div class="accent-line"></div><span class="chip chip-gold">Employer</span></div>
+                  <table>
+                    <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
+                    <tbody>
+                      ${pc.employer_match ? `<tr><td>401K Employer Match</td><td>${fmtCurrency(pc.employer_match)}</td><td class="ytd-val">${fmtCurrency(ytdData.employer_match)}</td></tr>` : ''}
+                    </tbody>
+                    <tfoot>
+                      <tr><td>Total</td><td>${fmtCurrency(pc.employer_match)}</td><td>${fmtCurrency(ytdData.employer_match)}</td></tr>
+                    </tfoot>
+                  </table>
+                </div>
+                
+                <div class="section">
+                  <div class="section-head"><h2>Taxable Wages</h2><div class="accent-line"></div></div>
+                  <table>
+                    <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
+                    <tbody>
+                      ${pc.oasdi ? `<tr><td>OASDI – Taxable Wages</td><td>${fmtCurrency(pc.gross_pay - pc.retirement_401k - pc.health_insurance - pc.dental_plan - pc.eye_plan - pc.hsa || 0)}</td><td class="ytd-val">${fmtCurrency(ytdData.gross - ytdData.retirement_401k || 0)}</td></tr>` : ''}
+                      ${pc.medicare ? `<tr><td>Medicare – Taxable Wages</td><td>${fmtCurrency(pc.gross_pay - pc.retirement_401k - pc.health_insurance - pc.dental_plan - pc.eye_plan - pc.hsa || 0)}</td><td class="ytd-val">${fmtCurrency(ytdData.gross - ytdData.retirement_401k || 0)}</td></tr>` : ''}
+                      ${pc.federal_tax ? `<tr><td>Federal Withholding – Taxable Wages</td><td>${fmtCurrency(pc.gross_pay - pc.retirement_401k - pc.health_insurance - pc.dental_plan - pc.eye_plan - pc.hsa || 0)}</td><td class="ytd-val">${fmtCurrency(ytdData.gross - ytdData.retirement_401k || 0)}</td></tr>` : ''}
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div class="two-col">
+                  <div class="section">
+                    <div class="section-head"><h2>Federal Withholding Status</h2><div class="accent-line"></div></div>
+                    <table class="kv-table">
+                      <tbody>
+                        <tr><td>Marital Status</td><td>${pc.federal_filing_status || 'Married Filing Jointly'}</td></tr>
+                        <tr><td>Allowances</td><td>${pc.federal_allowances || 0}</td></tr>
+                        <tr><td>Total Dependent Amount</td><td>${fmtCurrency(pc.dependent_amount || 0)}</td></tr>
+                        <tr><td>Additional Withholding</td><td>${fmtCurrency(pc.additional_withholding || 0)}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div class="section">
+                    <div class="section-head"><h2>State Withholding Status (${pc.state_name || 'GA'})</h2><div class="accent-line"></div></div>
+                    <table class="kv-table">
+                      <tbody>
+                        <tr><td>Marital Status</td><td>${pc.state_filing_status || '—'}</td></tr>
+                        <tr><td>Allowances</td><td>${pc.state_allowances || 0}</td></tr>
+                        <tr><td>Additional Withholding</td><td>$0.00</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                <div class="section">
+                  <div class="section-head"><h2>Direct Deposit</h2><div class="accent-line"></div></div>
+                  <div class="payment-cards">
+                    ${pc.bank_name ? `<div class="pay-card"><div class="bank-name">${pc.bank_name}</div><div class="acct">Account ······${pc.account_number || '****'}</div><div class="amount">${fmtCurrency(pc.deposit_amount)} <span class="currency">USD</span></div></div>` : ''}
+                    ${pc.bank2_name ? `<div class="pay-card secondary"><div class="bank-name">${pc.bank2_name}</div><div class="acct">Account ······${pc.account2_number || '****'}</div><div class="amount">${fmtCurrency(pc.deposit2_amount)} <span class="currency">USD</span></div></div>` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading payslip:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (paychecks.length > 0 && !parsedData) {
+        showPaystub(paychecks[0].id);
+    }
+});
+</script>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="bi bi-plus-circle"></i> Add New Paycheck Manually</h5>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('add_paycheck') }}" method="POST">
+            <div class="row g-3">
+                <div class="col-12"><h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-person-badge"></i> Employee Information</h6></div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">Employee Name</label>
+                    <input type="text" name="employee_name" class="form-control" placeholder="Richard Johnson">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Company</label>
+                    <input type="text" name="company" class="form-control" placeholder="NCR Voyix Corp.">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Employee ID</label>
+                    <input type="text" name="employee_id" class="form-control" placeholder="41477083970">
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-calendar-range"></i> Pay Period & Check Info</h6></div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Pay Period Begin</label>
+                    <input type="date" name="pay_period_begin" class="form-control" value="{{ today }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Pay Period End</label>
+                    <input type="date" name="pay_period_end" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Check Date</label>
+                    <input type="date" name="check_date" class="form-control" value="{{ today }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Check Number</label>
+                    <input type="text" name="check_number" class="form-control" placeholder="12345">
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-success border-bottom pb-2 mb-3"><i class="bi bi-cash-stack"></i> Summary (Current Period)</h6></div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Hours Worked</label>
+                    <input type="number" step="0.01" name="hours_worked" class="form-control" placeholder="80">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Gross Pay</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="gross_pay" class="form-control" required placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Pre-Tax Deductions</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="pre_tax_deductions" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Employee Taxes</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="employee_taxes" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Post-Tax Deductions</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="post_tax_deductions" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Net Pay</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="net_pay" class="form-control" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-list-ul"></i> Earnings</h6></div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Salary</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="salary" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Vacation</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="vacation_pay" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Biometric Credit</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="biometric_credit" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Spousal Biometric Credit</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="spousal_biometric" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Group Term Life</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="group_term_life" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Floating Holiday</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="floating_holiday" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Holiday</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="holiday_pay" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Other Earnings</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="other_earnings" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-danger border-bottom pb-2 mb-3"><i class="bi bi-percent"></i> Employee Taxes</h6></div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Federal Withholding</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="federal_tax" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">State Tax</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="state_tax" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">State</label>
+                    <input type="text" name="state_name" class="form-control" placeholder="GA">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">OASDI</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="oasdi" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Medicare</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="medicare" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-info border-bottom pb-2 mb-3"><i class="bi bi-shield-check"></i> Pre-Tax Deductions</h6></div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">401(k) Savings Plan</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="retirement_401k" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Medical</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="health_insurance" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Dental Plan</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="dental_plan" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Eye Plan</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="eye_plan" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Health Care FSA</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="health_care_fsa" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">HSA</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="hsa" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Optional Life</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="optional_life" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ADD Insurance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="add_insurance" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-secondary border-bottom pb-2 mb-3"><i class="bi bi-cash"></i> Post-Tax Deductions</h6></div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">401K Loan Repayment (Loan 1)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="loan_repayment" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Employee Stock Purchase</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="stock_purchase" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Spousal Life Insurance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="spousal_life" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Dependent Life Insurance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="dependent_life" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-success border-bottom pb-2 mb-3"><i class="bi bi-building"></i> Employer Paid Benefits</h6></div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">401K Employer Match</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="employer_match" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-bank"></i> Withholding Status</h6></div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Federal Marital Status</label>
+                    <input type="text" name="federal_filing_status" class="form-control" placeholder="Married Filing Jointly">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Federal Allowances</label>
+                    <input type="number" name="federal_allowances" class="form-control" value="0" placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Total Dependent Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="dependent_amount" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Additional Withholding</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="additional_withholding" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">State Filing Status</label>
+                    <input type="text" name="state_filing_status" class="form-control" placeholder="C - Married, 1 Income">
+                </div>
+                
+                <div class="col-12 mt-4"><h6 class="text-primary border-bottom pb-2 mb-3"><i class="bi bi-wallet2"></i> Direct Deposit</h6></div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">Bank 1 Name</label>
+                    <input type="text" name="bank_name" class="form-control" placeholder="PNC Bank">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Account Number (last 4)</label>
+                    <input type="text" name="account_number" class="form-control" placeholder="1863">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Deposit Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="deposit_amount" class="form-control" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Bank 2 Name</label>
+                    <input type="text" name="bank2_name" class="form-control" placeholder="First Tech Federal Credit Union">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Account 2 (last 4)</label>
+                    <input type="text" name="account2_number" class="form-control" placeholder="1475">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Account 2 Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="deposit2_amount" class="form-control" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save"></i> Save Paycheck</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

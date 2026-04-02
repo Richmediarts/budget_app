@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCR Voyix — Payslip</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --paper: #fffef9;
+    --ink: #1a1814;
+    --muted: #6b6558;
+    --rule: #d8d3c8;
+    --accent: #c8401a;
+    --accent-light: #f9ece8;
+    --green: #1a6b3a;
+    --green-light: #e8f5ee;
+    --blue: #1a3a6b;
+    --blue-light: #e8eef5;
+    --gold: #8a6a00;
+    --gold-light: #faf3e0;
+    --section-gap: 1.5rem;
+    --cell-pad: 0.5rem 0.75rem;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); }
+  
+  .paystub-preview { background: var(--bg); padding: 2rem; }
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  
+  .header {
+    background: var(--ink);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .logo { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 600; }
+  .logo span { color: var(--accent); }
+  .co-address { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: #a09890; line-height: 1.5; margin-top: 0.5rem; }
+  .doc-label { text-align: right; }
+  .tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890; }
+  .period { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; color: #fff; margin-top: 0.3rem; }
+  
+  .identity-bar { display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 2px solid var(--ink); }
+  .id-cell { padding: var(--cell-pad); border-right: 1px solid var(--rule); }
+  .id-cell:last-child { border-right: none; }
+  .id-cell label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+  .id-cell .val { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 500; }
+  
+  .summary-header { display: grid; grid-template-columns: repeat(6, 1fr); background: var(--ink); border-bottom: 1px solid #333; }
+  .summary-header .sh { padding: var(--cell-pad); font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: #a09890; text-align: right; }
+  .summary-header .sh:first-child { text-align: left; }
+  
+  .summary-row { display: grid; grid-template-columns: repeat(6, 1fr); background: var(--ink); }
+  .summary-row .sc { padding: var(--cell-pad); font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: #fff; text-align: right; border-right: 1px solid #333; }
+  .summary-row .sc:first-child { text-align: left; font-size: 0.7rem; color: #a09890; text-transform: uppercase; }
+  .summary-row .sc:last-child { border-right: none; }
+  .summary-row .sc:last-child { color: #7edba4; }
+  .summary-row.ytd .sc { background: #1f1d1a; }
+  
+  .paystub-body { padding: 1.5rem 2rem 2rem; }
+  
+  .net-hero { background: var(--green-light); border: 1px solid #b8deca; border-radius: 3px; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; margin: var(--section-gap) 0; flex-wrap: wrap; gap: 1rem; }
+  .net-hero .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); }
+  .net-hero .amount { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; color: var(--green); margin-top: 0.3rem; }
+  .net-hero .ytd-note { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted); text-align: right; }
+  .net-hero .ytd-note span { display: block; font-size: 1rem; font-weight: 600; color: var(--ink); margin-top: 0.2rem; }
+  
+  .section { margin-top: var(--section-gap); }
+  .section-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .section-head h2 { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .section-head .accent-line { flex: 1; height: 1px; background: var(--rule); }
+  .chip { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.15rem 0.4rem; border-radius: 20px; font-weight: 600; }
+  .chip-red { background: var(--accent-light); color: var(--accent); }
+  .chip-blue { background: var(--blue-light); color: var(--blue); }
+  .chip-gold { background: var(--gold-light); color: var(--gold); }
+  
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead th { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--rule); text-align: right; background: transparent; }
+  thead th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--rule); }
+  tbody tr:hover { background: #faf8f4; }
+  tbody td { padding: 0.4rem 0.6rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-align: right; }
+  tbody td:first-child { text-align: left; font-family: 'IBM Plex Sans', sans-serif; }
+  .ytd-val { color: var(--muted); font-size: 0.7rem !important; }
+  tfoot td { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.6rem; border-top: 2px solid var(--ink); text-align: right; background: var(--bg); }
+  tfoot td:first-child { text-align: left; }
+  
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .kv-table { width: 100%; border-collapse: collapse; }
+  .kv-table tr { border-bottom: 1px solid var(--rule); }
+  .kv-table tr:last-child { border-bottom: none; }
+  .kv-table td { padding: 0.4rem 0.6rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+  .kv-table td:first-child { font-family: 'IBM Plex Sans', sans-serif; color: var(--muted); }
+  .kv-table td:last-child { text-align: right; font-weight: 500; }
+  
+  .payment-cards { display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; }
+  .pay-card { flex: 1; min-width: 180px; border: 1px solid var(--rule); border-radius: 3px; padding: 0.75rem 1rem; position: relative; overflow: hidden; }
+  .pay-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); }
+  .pay-card.secondary::before { background: var(--blue); }
+  .pay-card .bank-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+  .pay-card .acct { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .pay-card .amount { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; }
+  .pay-card .currency { font-size: 0.6rem; color: var(--muted); margin-left: 0.2rem; }
+  
+  .date-small { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--muted); }
+  .dash { color: var(--muted); margin: 0 0.2rem; }
+  
+  @media (max-width: 700px) {
+    .identity-bar, .summary-header, .summary-row { grid-template-columns: repeat(3, 1fr); }
+    .two-col { grid-template-columns: 1fr; gap: 1rem; }
+    .paystub-body { padding: 1rem; }
+    .header { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="paystub-preview">
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo">{{ pc.company|default('NCR VOYIX')|replace(' ', ' ') }}</div>
+      <div class="co-address">
+        864 Spring St NW, Atlanta, GA 30308<br>
+        +1 (800) 225-5627
+      </div>
+    </div>
+    <div class="doc-label">
+      <div class="tag">Pay Statement</div>
+      <div class="period">{{ (pc.check_date or pc.pay_date)|default('—') }}</div>
+    </div>
+  </div>
+
+  <!-- IDENTITY BAR -->
+  <div class="identity-bar">
+    <div class="id-cell">
+      <label>Employee Name</label>
+      <div class="val">{{ pc.employee_name|default('—') }}</div>
+    </div>
+    <div class="id-cell">
+      <label>Company</label>
+      <div class="val">{{ pc.company|default('NCR Voyix Corp.') }}</div>
+    </div>
+    <div class="id-cell">
+      <label>Employee ID</label>
+      <div class="val">{{ pc.employee_id|default('—') }}</div>
+    </div>
+    <div class="id-cell">
+      <label>Period Begin</label>
+      <div class="val">{{ pc.pay_period_begin|default('—') }}</div>
+    </div>
+    <div class="id-cell">
+      <label>Period End</label>
+      <div class="val">{{ pc.pay_period_end|default('—') }}</div>
+    </div>
+    <div class="id-cell">
+      <label>Check Date</label>
+      <div class="val">{{ pc.check_date|default('—') }}</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY STRIP -->
+  <div class="summary-header">
+    <div class="sh" style="text-align:left">Period</div>
+    <div class="sh">Hours Worked</div>
+    <div class="sh">Gross Pay</div>
+    <div class="sh">Pre-Tax Ded.</div>
+    <div class="sh">Emp. Taxes</div>
+    <div class="sh">Post-Tax Ded.</div>
+  </div>
+
+  <div class="summary-row">
+    <div class="sc">Current</div>
+    <div class="sc">{{ pc.hours_worked|default('0') }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.gross_pay|default(0)) }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.pre_tax_deductions|default(0)) }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.employee_taxes|default(0)) }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.post_tax_deductions|default(0)) }}</div>
+  </div>
+
+  <div class="summary-row ytd">
+    <div class="sc">YTD</div>
+    <div class="sc">—</div>
+    <div class="sc">—</div>
+    <div class="sc">—</div>
+    <div class="sc">—</div>
+    <div class="sc">—</div>
+  </div>
+
+  <!-- BODY -->
+  <div class="paystub-body">
+    
+    <!-- NET PAY HERO -->
+    <div class="net-hero">
+      <div>
+        <div class="label">Net Pay — Current Period</div>
+        <div class="amount">${{ "%.2f"|format(pc.net_pay|default(0)) }}</div>
+      </div>
+      <div class="ytd-note">
+        Year-to-Date Net Pay
+        <span>—</span>
+      </div>
+    </div>
+
+    <!-- EARNINGS -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Earnings</h2>
+        <div class="accent-line"></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Dates</th>
+            <th>Hours</th>
+            <th>Rate</th>
+            <th>Amount</th>
+            <th>YTD</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if pc.salary|default(0) > 0 %}
+          <tr>
+            <td>Salary</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td>{{ ((pc.hours_worked|default(0) * 0.7)|int) if pc.hours_worked else '56' }}</td>
+            <td>—</td>
+            <td>${{ "%.2f"|format(pc.salary|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+          {% if pc.vacation_pay|default(0) > 0 %}
+          <tr>
+            <td>Vacation</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td>24</td>
+            <td>$57.38</td>
+            <td>${{ "%.2f"|format(pc.vacation_pay|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+          {% if pc.biometric_credit|default(0) > 0 %}
+          <tr>
+            <td>Biometric Credit</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${{ "%.2f"|format(pc.biometric_credit|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+          {% if pc.spousal_biometric|default(0) > 0 %}
+          <tr>
+            <td>Spousal Biometric Credit</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${{ "%.2f"|format(pc.spousal_biometric|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+          {% if pc.group_term_life|default(0) > 0 %}
+          <tr>
+            <td>Group Term Life</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${{ "%.2f"|format(pc.group_term_life|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+          {% if pc.floating_holiday|default(0) > 0 %}
+          <tr>
+            <td>Floating Holiday</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${{ "%.2f"|format(pc.floating_holiday|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+          {% if pc.holiday_pay|default(0) > 0 %}
+          <tr>
+            <td>Holiday</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${{ "%.2f"|format(pc.holiday_pay|default(0)) }}</td>
+            <td class="ytd-val">—</td>
+          </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total Earnings</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>${{ "%.2f"|format(pc.gross_pay|default(0)) }}</td>
+            <td>—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- DEDUCTIONS ROW -->
+    <div class="two-col">
+
+      <!-- PRE-TAX -->
+      <div class="section">
+        <div class="section-head">
+          <h2>Pre-Tax Deductions</h2>
+          <div class="accent-line"></div>
+          <span class="chip chip-red">Pre-Tax</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Description</th><th>Amount</th><th>YTD</th></tr>
+          </thead>
+          <tbody>
+            {% if pc.retirement_401k|default(0) > 0 %}
+            <tr><td>401k Savings Plan</td><td>${{ "%.2f"|format(pc.retirement_401k|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.health_insurance|default(0) > 0 %}
+            <tr><td>Medical</td><td>${{ "%.2f"|format(pc.health_insurance|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.dental_plan|default(0) > 0 %}
+            <tr><td>Dental Plan</td><td>${{ "%.2f"|format(pc.dental_plan|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.eye_plan|default(0) > 0 %}
+            <tr><td>Eye Plan</td><td>${{ "%.2f"|format(pc.eye_plan|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.health_care_fsa|default(0) > 0 %}
+            <tr><td>Health Care FSA</td><td>${{ "%.2f"|format(pc.health_care_fsa|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.optional_life|default(0) > 0 %}
+            <tr><td>Optional Life</td><td>${{ "%.2f"|format(pc.optional_life|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.add_insurance|default(0) > 0 %}
+            <tr><td>ADD Insurance</td><td>${{ "%.2f"|format(pc.add_insurance|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.hsa|default(0) > 0 %}
+            <tr><td>HSA</td><td>${{ "%.2f"|format(pc.hsa|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+          </tbody>
+          <tfoot>
+            <tr><td>Total</td><td>${{ "%.2f"|format(pc.pre_tax_deductions|default(0)) }}</td><td>—</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- POST-TAX -->
+      <div class="section">
+        <div class="section-head">
+          <h2>Post-Tax Deductions</h2>
+          <div class="accent-line"></div>
+          <span class="chip chip-blue">Post-Tax</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Description</th><th>Amount</th><th>YTD</th></tr>
+          </thead>
+          <tbody>
+            {% if pc.loan_repayment|default(0) > 0 %}
+            <tr><td>401K Loan Repayment (Loan 1)</td><td>${{ "%.2f"|format(pc.loan_repayment|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.stock_purchase|default(0) > 0 %}
+            <tr><td>Employee Stock Purchase</td><td>${{ "%.2f"|format(pc.stock_purchase|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.spousal_life|default(0) > 0 %}
+            <tr><td>Spousal Life Insurance</td><td>${{ "%.2f"|format(pc.spousal_life|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+            {% if pc.dependent_life|default(0) > 0 %}
+            <tr><td>Dependent Life Insurance</td><td>${{ "%.2f"|format(pc.dependent_life|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+          </tbody>
+          <tfoot>
+            <tr><td>Total</td><td>${{ "%.2f"|format(pc.post_tax_deductions|default(0)) }}</td><td>—</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- EMPLOYEE TAXES -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Employee Taxes</h2>
+        <div class="accent-line"></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Description</th><th>Amount</th><th>YTD</th></tr>
+        </thead>
+        <tbody>
+          {% if pc.federal_tax|default(0) > 0 %}
+          <tr><td>Federal Withholding</td><td>${{ "%.2f"|format(pc.federal_tax|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          {% endif %}
+          {% if pc.state_tax|default(0) > 0 %}
+          <tr><td>State Tax – {{ pc.state_name|default('GA') }}</td><td>${{ "%.2f"|format(pc.state_tax|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          {% endif %}
+          {% if pc.oasdi|default(0) > 0 %}
+          <tr><td>OASDI</td><td>${{ "%.2f"|format(pc.oasdi|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          {% endif %}
+          {% if pc.medicare|default(0) > 0 %}
+          <tr><td>Medicare</td><td>${{ "%.2f"|format(pc.medicare|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr><td>Total Employee Taxes</td><td>${{ "%.2f"|format(pc.employee_taxes|default(0)) }}</td><td>—</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- EMPLOYER BENEFITS -->
+    <div class="two-col">
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Employer Paid Benefits</h2>
+          <div class="accent-line"></div>
+          <span class="chip chip-gold">Employer</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Description</th><th>Amount</th><th>YTD</th></tr>
+          </thead>
+          <tbody>
+            {% if pc.employer_match|default(0) > 0 %}
+            <tr><td>401K Employer Match</td><td>${{ "%.2f"|format(pc.employer_match|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            {% endif %}
+          </tbody>
+          <tfoot>
+            <tr><td>Total</td><td>${{ "%.2f"|format(pc.employer_match|default(0)) }}</td><td>—</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2>Withholding Status</h2>
+          <div class="accent-line"></div>
+        </div>
+        <table class="kv-table">
+          {% if pc.federal_filing_status %}
+          <tr><td>Federal Status</td><td>{{ pc.federal_filing_status }}</td></tr>
+          {% endif %}
+          {% if pc.state_filing_status %}
+          <tr><td>State Status</td><td>{{ pc.state_filing_status }}</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+    </div>
+
+    <!-- PAYMENT -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Direct Deposit</h2>
+        <div class="accent-line"></div>
+      </div>
+      <div class="payment-cards">
+        {% if pc.bank_name or pc.deposit_amount|default(0) > 0 %}
+        <div class="pay-card">
+          <div class="bank-name">{{ pc.bank_name|default('Primary Bank') }}</div>
+          <div class="acct">Account ······{{ pc.account_number|default('****') }}</div>
+          <div class="amount">${{ "%.2f"|format(pc.deposit_amount|default(0)) }} <span class="currency">USD</span></div>
+        </div>
+        {% endif %}
+        {% if pc.bank2_name or pc.deposit2_amount|default(0) > 0 %}
+        <div class="pay-card secondary">
+          <div class="bank-name">{{ pc.bank2_name|default('Secondary Bank') }}</div>
+          <div class="acct">Account ······{{ pc.account2_number|default('****') }}</div>
+          <div class="amount">${{ "%.2f"|format(pc.deposit2_amount|default(0)) }} <span class="currency">USD</span></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Budget - Budget Tracker{% endblock %}
+{% block page_title %}Monthly Budget{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-plus-circle"></i> Add Budget Category</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_budget_category') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Category Name</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g., Groceries, Entertainment">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Monthly Limit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" name="monthly_limit" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Color</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="color" name="color" class="form-control form-control-color" value="#2E7D32" style="width: 50px;">
+                            <small class="text-muted">Choose a color for the progress bar</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Add Category</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> Budget Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2">Set realistic monthly limits based on your actual spending</li>
+                    <li class="mb-2">Review and adjust limits monthly</li>
+                    <li class="mb-2">Track every expense to stay on budget</li>
+                    <li>The 50/30/20 rule suggests: 50% needs, 30% wants, 20% savings</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-pie-chart"></i> Budget Categories</h5>
+            </div>
+            <div class="card-body">
+                {% if categories %}
+                    <div class="budget-grid">
+                        {% for category in categories %}
+                            <div class="budget-card">
+                                <div class="budget-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <span class="color-dot" style="background-color: {{ category.color }};"></span>
+                                            {{ category.name }}
+                                        </h5>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="#" onclick="editCategory({{ category.id }})"><i class="bi bi-pencil"></i> Edit</a></li>
+                                                <li><a class="dropdown-item text-danger" href="{{ url_for('delete_budget_category', id=category.id) }}" onclick="return confirm('Delete this category?')"><i class="bi bi-trash"></i> Delete</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="budget-amounts">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Monthly Limit:</span>
+                                        <strong>${{ "%.2f"|format(category.monthly_limit) }}</strong>
+                                    </div>
+                                </div>
+                                <div class="budget-progress mt-3">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" 
+                                             style="width: 0%; background-color: {{ category.color }};" 
+                                             id="progress-{{ category.id }}">
+                                            0%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="budget-percent mt-2">
+                                    <small class="text-muted">Spending vs. Limit</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-4">No budget categories added yet. Add categories to track your monthly spending.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if categories %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="bi bi-bar-chart"></i> Budget Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Monthly Limit</th>
+                                <th>Progress</th>
+                                <th>Remaining</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                                <tr>
+                                    <td>
+                                        <span class="color-dot" style="background-color: {{ category.color }};"></span>
+                                        {{ category.name }}
+                                    </td>
+                                    <td>${{ "%.2f"|format(category.monthly_limit) }}</td>
+                                    <td style="width: 150px;">
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: 0%; background-color: {{ category.color }};"></div>
+                                        </div>
+                                    </td>
+                                    <td>${{ "%.2f"|format(category.monthly_limit) }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td><strong>Total Budget</strong></td>
+                                <td><strong>${{ "%.2f"|format(total_budget) }}</strong></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+const categories = {{ categories|tojson }};
+
+function editCategory(id) {
+    const category = categories.find(c => c.id === id);
+    if (!category) return;
+    
+    const modal = `
+        <div class="modal fade" id="editCategoryModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Budget Category</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="/update_budget_category/${category.id}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Category Name</label>
+                                <input type="text" name="name" class="form-control" required value="${category.name}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Monthly Limit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="monthly_limit" class="form-control" required value="${category.monthly_limit}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Color</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="color" name="color" class="form-control form-control-color" value="${category.color}" style="width: 50px;">
+                                    <small class="text-muted">Choose a color for the progress bar</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('editCategoryModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    const modalInstance = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+    modalInstance.show();
+}
+</script>
+{% endblock %}

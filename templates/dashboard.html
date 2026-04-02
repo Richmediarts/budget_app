@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Budget Tracker{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="stat-card bank-balance">
+            <div class="stat-icon"><i class="bi bi-bank"></i></div>
+            <div class="stat-info">
+                <h3>Total Bank Balance</h3>
+                <h2 class="amount">${{ "%.2f"|format(stats.total_bank) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card credit-debt">
+            <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
+            <div class="stat-info">
+                <h3>Credit Card Debt</h3>
+                <h2 class="amount">${{ "%.2f"|format(stats.total_credit) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card net-worth">
+            <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-info">
+                <h3>Net Position</h3>
+                <h2 class="amount {% if stats.total_bank - stats.total_credit < 0 %}text-danger{% endif %}">
+                    ${{ "%.2f"|format(stats.total_bank - stats.total_credit) }}
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-receipt"></i> Upcoming Bills</h5>
+            </div>
+            <div class="card-body">
+                {% if stats.upcoming_bills %}
+                    <div class="list-group">
+                        {% for bill in stats.upcoming_bills %}
+                            {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d') %}
+                            {% set today = datetime.now() %}
+                            {% set days_until = (due_date - today).days %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
+                                    <br><small class="text-muted">{{ bill.due_date }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="amount">${{ "%.2f"|format(bill.amount) }}</span>
+                                    {% if days_until < 0 %}
+                                        <span class="badge bg-danger">Overdue {{ -days_until }}d</span>
+                                    {% elif days_until == 0 %}
+                                        <span class="badge bg-warning">Due Today</span>
+                                    {% elif days_until <= 7 %}
+                                        <span class="badge bg-warning">{{ days_until }} days</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ days_until }} days</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No upcoming bills.</p>
+                {% endif %}
+                <a href="{{ url_for('bills') }}" class="btn btn-sm btn-primary mt-3">View All Bills</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-cash-stack"></i> Last Paycheck</h5>
+            </div>
+            <div class="card-body">
+                {% if stats.last_paycheck %}
+                    <div class="paycheck-summary">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Pay Date:</span>
+                            <strong>{{ stats.last_paycheck.pay_date }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Gross Pay:</span>
+                            <span>${{ "%.2f"|format(stats.last_paycheck.gross_pay) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total Deductions:</span>
+                            <span class="text-danger">-${{ "%.2f"|format(stats.last_paycheck.gross_pay - stats.last_paycheck.net_pay) }}</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Net Pay:</strong>
+                            <strong class="text-success fs-5">${{ "%.2f"|format(stats.last_paycheck.net_pay) }}</strong>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No paychecks recorded yet.</p>
+                {% endif %}
+                <a href="{{ url_for('paychecks') }}" class="btn btn-sm btn-primary mt-3">View Paychecks</a>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="bi bi-calendar-event"></i> Next Paycheck</h5>
+            </div>
+            <div class="card-body">
+                {% if next_paycheck_date %}
+                    <p class="mb-1">Estimated next biweekly paycheck:</p>
+                    <h4 class="text-success">{{ next_paycheck_date }}</h4>
+                {% else %}
+                    <p class="text-muted">Add a paycheck to see the schedule.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('paychecks') }}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-plus-circle"></i> Add Paycheck
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('bills') }}" class="btn btn-outline-success w-100 mb-2">
+                            <i class="bi bi-plus-circle"></i> Add Bill
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('bank_accounts') }}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-plus-circle"></i> Add Account
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('credit_cards') }}" class="btn btn-outline-warning w-100 mb-2">
+                            <i class="bi bi-plus-circle"></i> Add Credit Card
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

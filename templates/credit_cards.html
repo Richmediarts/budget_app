@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Cards - Budget Tracker{% endblock %}
+{% block page_title %}Credit Cards{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-plus-circle"></i> Add Credit Card</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_credit_card') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Card Name</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g., Chase Sapphire">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last 4 Digits</label>
+                        <input type="text" name="last_four" class="form-control" maxlength="4" placeholder="1234">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Credit Limit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" name="credit_limit" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current Balance</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" name="current_balance" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Interest Rate (APR)</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" name="interest_rate" class="form-control" placeholder="0.00">
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Website</label>
+                        <input type="url" name="website" class="form-control" placeholder="https://creditcard.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Add Card</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h5>Total Credit Card Debt</h5>
+                <h2 class="mb-0">${{ "%.2f"|format(total_debt) }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-credit-card"></i> Your Credit Cards</h5>
+            </div>
+            <div class="card-body">
+                {% if cards %}
+                    <div class="row">
+                        {% for card in cards %}
+                            {% set utilization = (card.current_balance / card.credit_limit * 100) if card.credit_limit > 0 else 0 %}
+                            <div class="col-md-6 mb-3">
+                                <div class="credit-card-display" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                                    <div class="card-header-row">
+                                        <div>
+                                            <a href="#" onclick="editCard({{ card.id }}); return false;" class="text-decoration-none text-white">
+                                                <h5 class="text-white mb-0">{{ card.name }}</h5>
+                                            </a>
+                                            {% if card.last_four %}
+                                                <small class="text-white-50">**** **** **** {{ card.last_four }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="#" onclick="editCard({{ card.id }})"><i class="bi bi-pencil"></i> Edit</a></li>
+                                                <li><a class="dropdown-item text-danger" href="{{ url_for('delete_credit_card', id=card.id) }}" onclick="return confirm('Delete this card?')"><i class="bi bi-trash"></i> Delete</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="card-balance">
+                                        <small class="text-white-50">Balance</small>
+                                        <h3 class="text-white mb-0">${{ "%.2f"|format(card.current_balance) }}</h3>
+                                    </div>
+                                    <div class="card-footer-row">
+                                        <div>
+                                            <small class="text-white-50">Limit</small>
+                                            <div class="text-white">${{ "%.2f"|format(card.credit_limit) }}</div>
+                                        </div>
+                                        <div>
+                                            <small class="text-white-50">APR</small>
+                                            <div class="text-white">{{ "%.2f"|format(card.interest_rate) }}%</div>
+                                        </div>
+                                        <div>
+                                            <small class="text-white-50">Utilization</small>
+                                            <div class="text-white {% if utilization > 80 %}text-warning{% elif utilization > 50 %}text-info{% endif %}">
+                                                {{ "%.1f"|format(utilization) }}%
+                                            </div>
+                                        </div>
+                                        {% if card.website %}
+                                        <div>
+                                            <small class="text-white-50">Website</small>
+                                            <div><a href="{{ card.website }}" target="_blank" class="text-white"><i class="bi bi-box-arrow-up-right"></i> Login</a></div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="utilization-bar">
+                                        <div class="utilization-fill {% if utilization > 80 %}bg-danger{% elif utilization > 50 %}bg-warning{% else %}bg-success{% endif %}" 
+                                             style="width: {{ [utilization, 100]|min }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-4">No credit cards added yet. Add your first card to track your credit utilization.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const cards = {{ cards|tojson }};
+
+function editCard(id) {
+    const card = cards.find(c => c.id === id);
+    if (!card) return;
+    
+    const modal = `
+        <div class="modal fade" id="editCardModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Credit Card</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="/update_credit_card/${card.id}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Card Name</label>
+                                <input type="text" name="name" class="form-control" required value="${card.name}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Last 4 Digits</label>
+                                <input type="text" name="last_four" class="form-control" maxlength="4" value="${card.last_four || ''}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Credit Limit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="credit_limit" class="form-control" required value="${card.credit_limit}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Balance</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="current_balance" class="form-control" required value="${card.current_balance}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Interest Rate (APR)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" name="interest_rate" class="form-control" value="${card.interest_rate}">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Website</label>
+                                <input type="url" name="website" class="form-control" value="${card.website || ''}" placeholder="https://creditcard.com">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('editCardModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    const modalInstance = new bootstrap.Modal(document.getElementById('editCardModal'));
+    modalInstance.show();
+}
+</script>
+{% endblock %}

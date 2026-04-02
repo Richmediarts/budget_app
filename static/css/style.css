@@ -1,0 +1,910 @@
+:root {
+    --primary: #2E7D32;
+    --secondary: #388E3C;
+    --bg-light: #F5F5F5;
+    --text-dark: #212121;
+    --danger: #D32F2F;
+    --warning: #F57C00;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-light);
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 250px;
+    height: 100vh;
+    background: linear-gradient(180deg, #1a3a1a 0%, #0d2e0d 100%);
+    color: white;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+}
+
+.sidebar-header h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-item {
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.nav-item:hover, .nav-item.active {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.nav-item.active {
+    border-left: 3px solid var(--primary);
+    background: rgba(46, 125, 50, 0.3);
+}
+
+.nav-item i {
+    font-size: 1.2rem;
+}
+
+.main-content {
+    margin-left: 250px;
+    min-height: 100vh;
+}
+
+.top-header {
+    background: white;
+    padding: 15px 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.page-title {
+    margin: 0;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.content-area {
+    padding: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.bank-balance .stat-icon {
+    background: rgba(46, 125, 50, 0.1);
+    color: var(--primary);
+}
+
+.credit-debt .stat-icon {
+    background: rgba(211, 47, 47, 0.1);
+    color: var(--danger);
+}
+
+.net-worth .stat-icon {
+    background: rgba(56, 142, 60, 0.1);
+    color: var(--secondary);
+}
+
+.stat-info h3 {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.stat-info h2 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.amount {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background: white;
+    border-radius: 12px 12px 0 0 !important;
+    border-bottom: 1px solid #eee;
+    padding: 15px 20px;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.paystub {
+    background: white;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 0;
+    max-width: 600px;
+    margin: 0 auto;
+    font-family: 'Courier New', monospace;
+}
+
+.paystub-header-section {
+    background: #1a3a1a;
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.paystub-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.paystub-logo i {
+    font-size: 2rem;
+}
+
+.paystub-employee {
+    padding: 15px 20px;
+    border-bottom: 2px solid #eee;
+}
+
+.paystub-section {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.paystub-section h6 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.paystub-table {
+    margin: 0;
+}
+
+.paystub-table td:last-child {
+    width: 150px;
+}
+
+.paystub-notes {
+    padding: 15px 20px;
+    background: #f9f9f9;
+    border-top: 1px solid #eee;
+}
+
+.paystub .fw-bold {
+    font-weight: 700;
+}
+
+.paystub .text-success {
+    color: #28a745 !important;
+}
+
+.account-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #eee;
+    transition: all 0.3s;
+}
+
+.account-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.account-type-badge {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.credit-card-display {
+    border-radius: 16px;
+    padding: 20px;
+    color: white;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.credit-card-display .card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: auto;
+}
+
+.credit-card-display .card-balance {
+    margin: 30px 0;
+}
+
+.credit-card-display .card-footer-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+}
+
+.utilization-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    margin-top: 15px;
+    overflow: hidden;
+}
+
+.utilization-fill {
+    height: 100%;
+    transition: width 0.3s;
+}
+
+.budget-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.budget-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #eee;
+}
+
+.color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.budget-amounts {
+    margin-top: 15px;
+}
+
+.budget-progress .progress {
+    background: #e9ecef;
+    border-radius: 10px;
+}
+
+.budget-progress .progress-bar {
+    transition: width 0.3s ease;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #eee;
+    padding: 15px 0;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.paycheck-summary {
+    font-size: 1.1rem;
+}
+
+@media (max-width: 1199px) {
+    .main-content {
+        margin-left: 200px;
+    }
+    
+    .sidebar {
+        width: 200px;
+    }
+    
+    .sidebar-header h4 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 991px) {
+    .main-content {
+        margin-left: 180px;
+    }
+    
+    .sidebar {
+        width: 180px;
+    }
+    
+    .content-area {
+        padding: 20px;
+    }
+    
+    .stat-info h2 {
+        font-size: 1.5rem;
+    }
+    
+    .budget-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 70px;
+        padding: 10px 0;
+    }
+    
+    .sidebar-header {
+        display: none;
+    }
+    
+    .nav-item span {
+        display: none;
+    }
+    
+    .nav-item {
+        justify-content: center;
+        padding: 15px;
+    }
+    
+    .nav-item i {
+        font-size: 1.4rem;
+    }
+    
+    .main-content {
+        margin-left: 70px;
+    }
+    
+    .content-area {
+        padding: 15px;
+    }
+    
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .budget-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .two-col {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .content-area {
+        padding: 10px;
+    }
+    
+    .stat-info h2 {
+        font-size: 1.3rem;
+    }
+    
+    .card-header {
+        padding: 12px 15px;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    .table {
+        font-size: 0.85rem;
+    }
+    
+    .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .nav-tabs {
+        font-size: 0.85rem;
+    }
+    
+    .paystub-preview {
+        padding: 0.5rem;
+    }
+    
+    .paystub-preview .page {
+        font-size: 0.75rem;
+    }
+    
+    .paystub-preview .header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .paystub-preview .logo {
+        font-size: 1.2rem;
+    }
+    
+    .paystub-preview .period {
+        font-size: 1rem;
+    }
+    
+    .paystub-preview .identity-bar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .paystub-preview .summary-header,
+    .paystub-preview .strip-header,
+    .paystub-preview .summary-row,
+    .paystub-preview .sum-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .paystub-preview .id-cell {
+        padding: 0.4rem;
+    }
+    
+    .paystub-preview .paystub-body {
+        padding: 1rem;
+    }
+    
+    .paystub-preview .net-hero {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .paystub-preview .net-hero .amount {
+        font-size: 1.4rem;
+    }
+    
+    .paystub-preview .section {
+        margin-top: 1rem;
+    }
+    
+    .paystub-preview .section-head h2 {
+        font-size: 0.5rem;
+    }
+    
+    .paystub-preview table {
+        font-size: 0.7rem;
+    }
+    
+    .paystub-preview tbody td,
+    .paystub-preview thead th {
+        padding: 0.3rem 0.4rem;
+    }
+    
+    .paystub-preview .payment-cards {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 8px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .stat-info h3 {
+        font-size: 0.8rem;
+    }
+    
+    .stat-info h2 {
+        font-size: 1.2rem;
+    }
+    
+    .paystub-preview .identity-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .paystub-preview .summary-header,
+    .paystub-preview .strip-header,
+    .paystub-preview .summary-row,
+    .paystub-preview .sum-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .paystub-preview .sc:first-child,
+    .paystub-preview .sh:first-child {
+        display: none;
+    }
+    
+    .form-control, .form-select {
+        font-size: 0.875rem;
+    }
+    
+    .input-group-text {
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 1400px) {
+    .main-content {
+        margin-left: 280px;
+    }
+    
+    .sidebar {
+        width: 280px;
+    }
+    
+    .sidebar-header h4 {
+        font-size: 1.3rem;
+    }
+    
+    .content-area {
+        padding: 40px;
+        max-width: 1600px;
+    }
+    
+    .stat-info h2 {
+        font-size: 2rem;
+    }
+    
+    .budget-grid {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+}
+
+@media (min-width: 1920px) {
+    .content-area {
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 50px;
+    }
+    
+    .budget-grid {
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+    .sidebar {
+        width: 60px;
+        padding: 5px 0;
+    }
+    
+    .sidebar-header {
+        display: none;
+    }
+    
+    .nav-item {
+        padding: 10px;
+    }
+    
+    .nav-item span {
+        display: none;
+    }
+    
+    .main-content {
+        margin-left: 60px;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .nav-item:hover {
+        background: transparent;
+    }
+    
+    .nav-item:active {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    .account-card:hover {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+}
+
+@media print {
+    .sidebar {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+    
+    .paystub-preview {
+        box-shadow: none !important;
+        border: 1px solid #000;
+    }
+}
+
+.paystub-preview { background: #f5f3ee; padding: 2rem; }
+.paystub-preview .page { max-width: 960px; margin: 0 auto; background: #fffef9; border: 1px solid #d8d3c8; box-shadow: 0 4px 40px rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden; }
+.paystub-preview .header { background: #1a1814; color: #fff; padding: 1.5rem 2rem; display: flex; justify-content: space-between; flex-wrap: wrap; }
+.paystub-preview .logo { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 600; }
+.paystub-preview .logo span { color: #c8401a; }
+.paystub-preview .co-address { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: #a09890; margin-top: 0.5rem; line-height: 1.5; }
+.paystub-preview .doc-label { text-align: right; }
+.paystub-preview .tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890; }
+.paystub-preview .period { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; color: #fff; margin-top: 0.3rem; }
+.paystub-preview .identity-bar { display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 2px solid #1a1814; }
+.paystub-preview .id-cell { padding: 0.5rem 0.75rem; border-right: 1px solid #d8d3c8; }
+.paystub-preview .id-cell:last-child { border-right: none; }
+.paystub-preview .id-cell label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6558; margin-bottom: 0.2rem; }
+.paystub-preview .id-cell .val { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 500; }
+.paystub-preview .summary-header, .paystub-preview .strip-header { display: grid; grid-template-columns: repeat(6, 1fr); background: #1a1814; }
+.paystub-preview .sh { padding: 0.5rem 0.75rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: #a09890; text-align: right; }
+.paystub-preview .sh:first-child { text-align: left; }
+.paystub-preview .summary-row, .paystub-preview .sum-row { display: grid; grid-template-columns: repeat(6, 1fr); background: #1a1814; }
+.paystub-preview .sc { padding: 0.5rem 0.75rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500; color: #fff; text-align: right; border-right: 1px solid #333; }
+.paystub-preview .sc:first-child { text-align: left; font-size: 0.7rem; color: #a09890; text-transform: uppercase; }
+.paystub-preview .sc:last-child { color: #7edba4; border-right: none; }
+.paystub-preview .paystub-body { padding: 1.5rem 2rem; }
+.paystub-preview .net-hero { background: #e8f5ee; border: 1px solid #b8deca; border-radius: 3px; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0; flex-wrap: wrap; gap: 1rem; }
+.paystub-preview .net-hero .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #1a6b3a; }
+.paystub-preview .net-hero .amount { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; color: #1a6b3a; margin-top: 0.3rem; }
+.paystub-preview .net-hero .ytd-note { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: #6b6558; text-align: right; }
+.paystub-preview .net-hero .ytd-note span { display: block; font-size: 1rem; font-weight: 600; color: #1a1814; margin-top: 0.2rem; }
+.paystub-preview .section { margin-top: 1.5rem; }
+.paystub-preview .section-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.paystub-preview .section-head h2 { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6b6558; font-weight: 500; margin: 0; }
+.paystub-preview .accent-line { flex: 1; height: 1px; background: #d8d3c8; min-width: 50px; }
+.paystub-preview .chip { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.15rem 0.4rem; border-radius: 20px; font-weight: 600; }
+.paystub-preview .chip-red { background: #f9ece8; color: #c8401a; }
+.paystub-preview .chip-blue { background: #e8eef5; color: #1a3a6b; }
+.paystub-preview .chip-gold { background: #faf3e0; color: #8a6a00; }
+.paystub-preview table { width: 100%; border-collapse: collapse; font-size: 0.8rem; overflow-x: auto; display: block; }
+.paystub-preview table { display: table; }
+.paystub-preview thead th { font-family: 'IBM Plex Mono', monospace; font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6558; font-weight: 500; padding: 0.4rem 0.6rem; border-bottom: 1px solid #d8d3c8; text-align: right; white-space: nowrap; }
+.paystub-preview thead th:first-child { text-align: left; }
+.paystub-preview tbody tr { border-bottom: 1px solid #d8d3c8; }
+.paystub-preview tbody td { padding: 0.4rem 0.6rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-align: right; }
+.paystub-preview tbody td:first-child { text-align: left; font-family: 'IBM Plex Sans', sans-serif; }
+.paystub-preview tbody td:nth-child(2) { text-align: right; }
+.paystub-preview tbody td:nth-child(3) { text-align: center; }
+.paystub-preview tbody td:nth-child(4) { text-align: center; }
+.paystub-preview .ytd-val { color: #6b6558; }
+.paystub-preview tfoot td { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.6rem; border-top: 2px solid #1a1814; text-align: right; background: #f5f3ee; }
+.paystub-preview tfoot td:first-child { text-align: left; }
+.paystub-preview tfoot td:nth-child(2),
+.paystub-preview tfoot td:nth-child(3),
+.paystub-preview tfoot td:nth-child(4) { text-align: center; }
+.paystub-preview .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem; }
+.paystub-preview .payment-cards { display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; }
+.paystub-preview .pay-card { flex: 1; min-width: 180px; border: 1px solid #d8d3c8; border-radius: 3px; padding: 0.75rem 1rem; position: relative; overflow: hidden; }
+.paystub-preview .pay-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #c8401a; }
+.paystub-preview .pay-card.secondary::before { background: #1a3a6b; }
+.paystub-preview .pay-card .bank-name { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6b6558; margin-bottom: 0.3rem; }
+.paystub-preview .pay-card .acct { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: #6b6558; margin-bottom: 0.5rem; }
+.paystub-preview .pay-card .amount { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 600; }
+.paystub-preview .pay-card .currency { font-size: 0.6rem; color: #6b6558; margin-left: 0.2rem; }
+.paystub-preview .kv-table { width: 100%; }
+.paystub-preview .kv-table td { padding: 0.4rem 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+.paystub-preview .kv-table td:first-child { color: #6b6558; }
+
+@media (max-width: 992px) {
+    .paystub-preview .two-col {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .paystub-preview {
+        padding: 0.5rem;
+    }
+    
+    .paystub-preview .header {
+        padding: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .paystub-preview .doc-label {
+        text-align: left;
+    }
+    
+    .paystub-preview .logo {
+        font-size: 1.2rem;
+    }
+    
+    .paystub-preview .identity-bar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .paystub-preview .id-cell {
+        padding: 0.4rem;
+    }
+    
+    .paystub-preview .id-cell label {
+        font-size: 0.5rem;
+    }
+    
+    .paystub-preview .id-cell .val {
+        font-size: 0.65rem;
+        word-break: break-all;
+    }
+    
+    .paystub-preview .summary-header,
+    .paystub-preview .strip-header,
+    .paystub-preview .summary-row,
+    .paystub-preview .sum-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .paystub-preview .sc, .paystub-preview .sh {
+        padding: 0.4rem;
+        font-size: 0.6rem;
+    }
+    
+    .paystub-preview .paystub-body {
+        padding: 1rem;
+    }
+    
+    .paystub-preview .net-hero {
+        flex-direction: column;
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .paystub-preview .net-hero .amount {
+        font-size: 1.4rem;
+    }
+    
+    .paystub-preview .net-hero .ytd-note {
+        text-align: center;
+    }
+    
+    .paystub-preview .section {
+        margin-top: 1rem;
+    }
+    
+    .paystub-preview table {
+        font-size: 0.7rem;
+    }
+    
+    .paystub-preview .payment-cards {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 576px) {
+    .paystub-preview .identity-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .paystub-preview .summary-header,
+    .paystub-preview .strip-header,
+    .paystub-preview .summary-row,
+    .paystub-preview .sum-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .paystub-preview .sc:first-child,
+    .paystub-preview .sh:first-child {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .paystub-preview .identity-bar {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .paystub-preview table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+.alert {
+    border-radius: 8px;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #333;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-primary:hover {
+    background-color: #1b5e20;
+    border-color: #1b5e20;
+}
+
+.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.paystub-detailed {
+    font-size: 0.9rem;
+}
+
+.paystub-header-detailed {
+    background: linear-gradient(135deg, #1a3a1a 0%, #0d2e0d 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+}
+
+.paystub-employee-detailed {
+    background: #f8f9fa;
+    padding: 15px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.paystub-detail-section {
+    background: #fafafa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.paystub-detail-section h6 {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.paystub-payment {
+    background: #e8f5e9;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #c8e6c9;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #666;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    background: transparent;
+}
+
+.border-bottom {
+    border-bottom: 1px solid #dee2e6 !important;
+}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Bank Accounts - Budget Tracker{% endblock %}
+{% block page_title %}Bank Accounts{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-plus-circle"></i> Add Bank Account</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_bank_account') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Account Name</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g., Main Checking">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Account Type</label>
+                        <select name="account_type" class="form-select" required>
+                            <option value="checking">Checking</option>
+                            <option value="savings">Savings</option>
+                            <option value="investment">Investment</option>
+                            <option value="money_market">Money Market</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Institution</label>
+                        <input type="text" name="institution" class="form-control" placeholder="e.g., Chase, Bank of America">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last 4 Digits</label>
+                        <input type="text" name="account_number_last4" class="form-control" maxlength="4" placeholder="1234">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current Balance</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" name="current_balance" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Website</label>
+                        <input type="url" name="website" class="form-control" placeholder="https://bank.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Add Account</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h5>Total Bank Balance</h5>
+                <h2 class="mb-0">${{ "%.2f"|format(total_balance) }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-bank"></i> Your Bank Accounts</h5>
+            </div>
+            <div class="card-body">
+                {% if accounts %}
+                    <div class="row">
+                        {% for account in accounts %}
+                            <div class="col-md-6 mb-3">
+                                <div class="account-card">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h5 class="mb-0">
+                                                <a href="#" onclick="editAccount({{ account.id }}); return false;" class="text-decoration-none text-reset">
+                                                    <i class="bi bi-{{ 'wallet' if account.account_type == 'checking' else 'piggy-bank' if account.account_type == 'savings' else 'graph-up' }}"></i> {{ account.name }}
+                                                </a>
+                                            </h5>
+                                            <small class="text-muted">{{ account.institution or 'Unknown Institution' }}</small>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" onclick="editAccount({{ account.id }})"><i class="bi bi-pencil"></i> Edit</a></li>
+                                                <li><a class="dropdown-item text-danger" href="{{ url_for('delete_bank_account', id=account.id) }}" onclick="return confirm('Delete this account?')"><i class="bi bi-trash"></i> Delete</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="account-type-badge">
+                                        <span class="badge bg-{{ 'primary' if account.account_type == 'checking' else 'success' if account.account_type == 'savings' else 'info' }}">
+                                            {{ account.account_type }}
+                                        </span>
+                                        {% if account.account_number_last4 %}
+                                            <span class="badge bg-secondary">****{{ account.account_number_last4 }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <hr>
+                                    <div class="balance-display">
+                                        <small class="text-muted">Current Balance</small>
+                                        <h3 class="mb-0 {% if account.current_balance < 0 %}text-danger{% endif %}">
+                                            ${{ "%.2f"|format(account.current_balance) }}
+                                        </h3>
+                                    </div>
+                                    {% if account.website %}
+                                    <div class="mt-2">
+                                        <a href="{{ account.website }}" target="_blank" class="text-decoration-none">
+                                            <i class="bi bi-box-arrow-up-right"></i> Login to Account
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-4">No bank accounts added yet. Add your first account to start tracking your balance.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const accounts = {{ accounts|tojson }};
+
+function editAccount(id) {
+    const account = accounts.find(a => a.id === id);
+    if (!account) return;
+    
+    const types = ['checking', 'savings', 'investment', 'money_market', 'other'];
+    
+    const modal = `
+        <div class="modal fade" id="editAccountModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Bank Account</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="/update_bank_account/${account.id}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Account Name</label>
+                                <input type="text" name="name" class="form-control" required value="${account.name}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Account Type</label>
+                                <select name="account_type" class="form-select" required>
+                                    ${types.map(t => `<option value="${t}" ${t === account.account_type ? 'selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1).replace('_', ' ')}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Institution</label>
+                                <input type="text" name="institution" class="form-control" value="${account.institution || ''}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Last 4 Digits</label>
+                                <input type="text" name="account_number_last4" class="form-control" maxlength="4" value="${account.account_number_last4 || ''}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Balance</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="current_balance" class="form-control" required value="${account.current_balance}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Website</label>
+                                <input type="url" name="website" class="form-control" value="${account.website || ''}" placeholder="https://bank.com">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('editAccountModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    const modalInstance = new bootstrap.Modal(document.getElementById('editAccountModal'));
+    modalInstance.show();
+}
+</script>
+{% endblock %}
