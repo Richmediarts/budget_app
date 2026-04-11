@@ -1,7 +1,8 @@
 import sqlite3
 from datetime import datetime, timedelta
 
-DATABASE = '/DATA/budget_app/budget.db'
+import os
+DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'budget.db')
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -28,6 +29,7 @@ def init_db():
             institution TEXT,
             account_number_last4 TEXT,
             current_balance REAL DEFAULT 0,
+            website TEXT,
             is_active INTEGER DEFAULT 1
         );
         
@@ -152,6 +154,7 @@ def init_db():
         'stock_purchase': 'REAL DEFAULT 0',
         'spousal_life': 'REAL DEFAULT 0',
         'employer_match': 'REAL DEFAULT 0',
+        'employer_hsa': 'REAL DEFAULT 0',
         'federal_filing_status': 'TEXT',
         'federal_allowances': 'INTEGER DEFAULT 0',
         'dependent_amount': 'REAL DEFAULT 0',
@@ -161,7 +164,12 @@ def init_db():
         'deposit_amount': 'REAL DEFAULT 0',
         'bank2_name': 'TEXT',
         'account2_number': 'TEXT',
-        'deposit2_amount': 'REAL DEFAULT 0'
+        'deposit2_amount': 'REAL DEFAULT 0',
+        'gross_pay_ytd': 'REAL DEFAULT 0',
+        'pre_tax_deductions_ytd': 'REAL DEFAULT 0',
+        'employee_taxes_ytd': 'REAL DEFAULT 0',
+        'post_tax_deductions_ytd': 'REAL DEFAULT 0',
+        'net_pay_ytd': 'REAL DEFAULT 0'
     }
     
     for col_name, col_type in new_columns.items():
@@ -182,11 +190,11 @@ def get_all_payees():
     conn.close()
     return [dict(row) for row in payees]
 
-def add_payee(name, category, account_number, notes, website=''):
+def add_payee(name, category, account_number, notes):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO payees (name, category, account_number, notes, website) VALUES (?, ?, ?, ?, ?)',
-                   (name, category, account_number, notes, website))
+    cursor.execute('INSERT INTO payees (name, category, account_number, notes) VALUES (?, ?, ?, ?)',
+                   (name, category, account_number, notes))
     conn.commit()
     conn.close()
 
@@ -296,10 +304,11 @@ def update_paycheck(id, **kwargs):
         'federal_tax', 'state_tax', 'state_name', 'social_security', 'retirement_401k',
         'add_insurance', 'dental_plan', 'eye_plan', 'health_care_fsa', 'health_insurance',
         'optional_life', 'hsa', 'loan_repayment', 'dependent_life', 'stock_purchase',
-        'spousal_life', 'employer_match', 'federal_filing_status', 'federal_allowances',
+        'spousal_life', 'employer_match', 'employer_hsa', 'federal_filing_status', 'federal_allowances',
         'dependent_amount', 'additional_withholding', 'state_filing_status',
         'bank_name', 'account_number', 'deposit_amount', 'bank2_name', 'account2_number',
-        'deposit2_amount', 'notes'
+        'deposit2_amount', 'gross_pay_ytd', 'pre_tax_deductions_ytd', 'employee_taxes_ytd',
+        'post_tax_deductions_ytd', 'net_pay_ytd', 'notes'
     ]
     
     numeric_fields = ['hours_worked', 'gross_pay', 'pre_tax_deductions', 'employee_taxes', 
@@ -309,7 +318,7 @@ def update_paycheck(id, **kwargs):
                       'state_tax', 'social_security', 'retirement_401k', 'add_insurance', 
                       'dental_plan', 'eye_plan', 'health_care_fsa', 'health_insurance',
                       'optional_life', 'hsa', 'loan_repayment', 'dependent_life', 'stock_purchase',
-                      'spousal_life', 'employer_match', 'deposit_amount', 'deposit2_amount']
+                      'spousal_life', 'employer_match', 'employer_hsa', 'deposit_amount', 'deposit2_amount']
     
     non_numeric = ['pay_date', 'pay_period_begin', 'pay_period_end', 'check_date', 'check_number',
                    'employee_name', 'employee_id', 'company', 'state_name', 'federal_filing_status',

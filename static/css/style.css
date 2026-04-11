@@ -5,13 +5,109 @@
     --text-dark: #212121;
     --danger: #D32F2F;
     --warning: #F57C00;
+    --sidebar-width: 250px;
+    --top-header-height: auto;
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background-color: var(--bg-light);
     margin: 0;
     padding: 0;
+    overscroll-behavior: contain;
+}
+
+.mobile-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: linear-gradient(180deg, #1a3a1a 0%, #0d2e0d 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    z-index: 1050;
+    gap: 12px;
+}
+
+.mobile-nav-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.mobile-nav-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-nav-toggle:hover,
+.mobile-nav-toggle:active {
+    background: rgba(255,255,255,0.1);
+}
+
+.sidebar-nav-mobile {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-nav-mobile .nav-item {
+    padding: 16px 20px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.sidebar-nav-mobile .nav-item:active {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.sidebar-nav-mobile .nav-item.active {
+    background: rgba(46, 125, 50, 0.3);
+    color: white;
+    border-left: 4px solid var(--primary);
+}
+
+.sidebar-nav-mobile .nav-item i {
+    font-size: 1.3rem;
+    width: 24px;
+    text-align: center;
+}
+
+.offcanvas {
+    max-width: 300px;
+    background: linear-gradient(180deg, #1a3a1a 0%, #0d2e0d 100%);
+}
+
+.offcanvas .offcanvas-header {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: white;
+}
+
+.offcanvas .btn-close {
+    filter: invert(1);
 }
 
 .sidebar {
@@ -67,20 +163,25 @@ body {
 }
 
 .main-content {
-    margin-left: 250px;
+    margin-left: var(--sidebar-width);
     min-height: 100vh;
+    padding-top: 0;
 }
 
 .top-header {
     background: white;
     padding: 15px 30px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .page-title {
     margin: 0;
     color: var(--text-dark);
     font-weight: 600;
+    font-size: 1.25rem;
 }
 
 .content-area {
@@ -328,76 +429,43 @@ body {
     font-size: 1.1rem;
 }
 
-@media (max-width: 1199px) {
+@media print {
+    .sidebar, .mobile-nav {
+        display: none !important;
+    }
+    
     .main-content {
-        margin-left: 200px;
+        margin-left: 0 !important;
     }
     
-    .sidebar {
-        width: 200px;
+    .paystub-preview {
+        box-shadow: none !important;
+        border: 1px solid #000;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .main-content {
+        margin-left: 0;
+        padding-top: 56px;
     }
     
-    .sidebar-header h4 {
+    .top-header {
+        padding: 12px 16px;
+    }
+    
+    .page-title {
         font-size: 1.1rem;
     }
-}
-
-@media (max-width: 991px) {
-    .main-content {
-        margin-left: 180px;
-    }
-    
-    .sidebar {
-        width: 180px;
-    }
     
     .content-area {
-        padding: 20px;
-    }
-    
-    .stat-info h2 {
-        font-size: 1.5rem;
-    }
-    
-    .budget-grid {
-        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .sidebar {
-        width: 70px;
-        padding: 10px 0;
-    }
-    
-    .sidebar-header {
-        display: none;
-    }
-    
-    .nav-item span {
-        display: none;
-    }
-    
-    .nav-item {
-        justify-content: center;
-        padding: 15px;
-    }
-    
-    .nav-item i {
-        font-size: 1.4rem;
-    }
-    
-    .main-content {
-        margin-left: 70px;
-    }
-    
-    .content-area {
-        padding: 15px;
+        padding: 16px;
     }
     
     .stat-card {
         flex-direction: column;
         text-align: center;
+        padding: 16px;
     }
     
     .stat-icon {
@@ -406,18 +474,107 @@ body {
         font-size: 1.5rem;
     }
     
+    .stat-info h2 {
+        font-size: 1.5rem;
+    }
+    
+    .card {
+        margin-bottom: 16px;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    .form-control, .form-select {
+        min-height: 44px;
+        font-size: 16px;
+    }
+    
+    .btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    
+    .table-responsive {
+        border: none;
+        margin: 0 -16px;
+        padding: 0 16px;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .table td, .table th {
+        padding: 10px 8px;
+        vertical-align: middle;
+    }
+    
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .nav-tabs .nav-link {
+        white-space: nowrap;
+        padding: 10px 16px;
+    }
+    
     .budget-grid {
         grid-template-columns: 1fr;
     }
     
-    .two-col {
-        grid-template-columns: 1fr !important;
+    .account-card {
+        margin-bottom: 12px;
+    }
+    
+    .list-group-item {
+        padding: 12px 0;
+    }
+    
+    .paystub-preview .page {
+        font-size: 0.75rem;
+    }
+    
+    .dropdown-menu {
+        position: fixed;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto;
+    }
+    
+    .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .modal-content {
+        max-height: calc(100vh - 20px);
+        overflow-y: auto;
     }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 575.98px) {
     .content-area {
-        padding: 10px;
+        padding: 12px;
+    }
+    
+    .top-header {
+        padding: 10px 12px;
+    }
+    
+    .stat-card {
+        padding: 14px;
     }
     
     .stat-info h2 {
@@ -425,153 +582,97 @@ body {
     }
     
     .card-header {
-        padding: 12px 15px;
+        padding: 12px 14px;
     }
     
     .card-body {
-        padding: 15px;
-    }
-    
-    .table {
-        font-size: 0.85rem;
+        padding: 14px;
     }
     
     .btn {
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
+        width: 100%;
+        margin-bottom: 8px;
     }
     
-    .nav-tabs {
-        font-size: 0.85rem;
+    .btn-sm {
+        width: auto;
+        margin-bottom: 0;
     }
     
     .paystub-preview {
-        padding: 0.5rem;
-    }
-    
-    .paystub-preview .page {
-        font-size: 0.75rem;
+        padding: 0;
+        font-size: 0.7rem;
     }
     
     .paystub-preview .header {
-        padding: 1rem;
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .paystub-preview .logo {
-        font-size: 1.2rem;
-    }
-    
-    .paystub-preview .period {
-        font-size: 1rem;
+        padding: 12px;
     }
     
     .paystub-preview .identity-bar {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    .paystub-preview .summary-header,
-    .paystub-preview .strip-header,
-    .paystub-preview .summary-row,
-    .paystub-preview .sum-row {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    .paystub-preview .id-cell {
-        padding: 0.4rem;
+        grid-template-columns: repeat(2, 1fr);
     }
     
     .paystub-preview .paystub-body {
-        padding: 1rem;
+        padding: 12px;
     }
     
     .paystub-preview .net-hero {
-        padding: 0.75rem 1rem;
         flex-direction: column;
         text-align: center;
-        gap: 10px;
+        gap: 8px;
     }
     
     .paystub-preview .net-hero .amount {
         font-size: 1.4rem;
     }
     
-    .paystub-preview .section {
-        margin-top: 1rem;
-    }
-    
-    .paystub-preview .section-head h2 {
-        font-size: 0.5rem;
-    }
-    
     .paystub-preview table {
-        font-size: 0.7rem;
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
-    .paystub-preview tbody td,
-    .paystub-preview thead th {
-        padding: 0.3rem 0.4rem;
+    .row {
+        --bs-gutter-y: 8px;
     }
     
-    .paystub-preview .payment-cards {
-        flex-direction: column;
+    .badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 400px) {
     .content-area {
-        padding: 8px;
+        padding: 10px;
+    }
+    
+    .card-body {
+        padding: 12px;
     }
     
     .stat-card {
-        padding: 15px;
+        padding: 12px;
     }
     
-    .stat-info h3 {
-        font-size: 0.8rem;
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
     }
     
-    .stat-info h2 {
-        font-size: 1.2rem;
-    }
-    
-    .paystub-preview .identity-bar {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .paystub-preview .summary-header,
-    .paystub-preview .strip-header,
-    .paystub-preview .summary-row,
-    .paystub-preview .sum-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .paystub-preview .sc:first-child,
-    .paystub-preview .sh:first-child {
-        display: none;
-    }
-    
-    .form-control, .form-select {
+    .form-label {
         font-size: 0.875rem;
     }
     
-    .input-group-text {
-        font-size: 0.875rem;
+    .input-group {
+        flex-wrap: nowrap;
     }
 }
 
 @media (min-width: 1400px) {
-    .main-content {
-        margin-left: 280px;
-    }
-    
-    .sidebar {
-        width: 280px;
-    }
-    
-    .sidebar-header h4 {
-        font-size: 1.3rem;
+    :root {
+        --sidebar-width: 280px;
     }
     
     .content-area {
@@ -600,35 +701,12 @@ body {
     }
 }
 
-@media (orientation: landscape) and (max-height: 600px) {
-    .sidebar {
-        width: 60px;
-        padding: 5px 0;
-    }
-    
-    .sidebar-header {
-        display: none;
-    }
-    
-    .nav-item {
-        padding: 10px;
-    }
-    
-    .nav-item span {
-        display: none;
-    }
-    
-    .main-content {
-        margin-left: 60px;
-    }
-}
-
 @media (hover: none) and (pointer: coarse) {
-    .nav-item:hover {
+    .nav-item:hover, .sidebar-nav-mobile .nav-item:hover {
         background: transparent;
     }
     
-    .nav-item:active {
+    .nav-item:active, .sidebar-nav-mobile .nav-item:active {
         background: rgba(255,255,255,0.2);
     }
     
@@ -636,20 +714,39 @@ body {
         transform: none;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+    
+    .btn:hover {
+        transform: none;
+    }
+    
+    .btn:active {
+        transform: scale(0.98);
+    }
+    
+    input, select, textarea {
+        font-size: 16px !important;
+    }
 }
 
-@media print {
-    .sidebar {
-        display: none !important;
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
-    
+}
+
+@supports (-webkit-touch-callout: none) {
     .main-content {
-        margin-left: 0 !important;
+        min-height: -webkit-fill-available;
     }
     
-    .paystub-preview {
-        box-shadow: none !important;
-        border: 1px solid #000;
+    html {
+        height: -webkit-fill-available;
+    }
+    
+    body {
+        min-height: -webkit-fill-available;
     }
 }
 

@@ -82,6 +82,7 @@ def add_paycheck():
         stock_purchase=float(request.form.get('stock_purchase') or 0),
         spousal_life=float(request.form.get('spousal_life') or 0),
         employer_match=float(request.form.get('employer_match') or 0),
+        employer_hsa=float(request.form.get('employer_hsa') or 0),
         federal_filing_status=request.form.get('federal_filing_status', ''),
         state_filing_status=request.form.get('state_filing_status', ''),
         bank_name=request.form.get('bank_name', ''),
@@ -90,6 +91,11 @@ def add_paycheck():
         bank2_name=request.form.get('bank2_name', ''),
         account2_number=request.form.get('account2_number', ''),
         deposit2_amount=float(request.form.get('deposit2_amount') or 0),
+        gross_pay_ytd=float(request.form.get('gross_pay_ytd') or 0),
+        pre_tax_deductions_ytd=float(request.form.get('pre_tax_deductions_ytd') or 0),
+        employee_taxes_ytd=float(request.form.get('employee_taxes_ytd') or 0),
+        post_tax_deductions_ytd=float(request.form.get('post_tax_deductions_ytd') or 0),
+        net_pay_ytd=float(request.form.get('net_pay_ytd') or 0),
         notes=request.form.get('notes', '')
     )
     flash('Paycheck added successfully!', 'success')
@@ -121,7 +127,9 @@ def update_paycheck(id):
                       'retirement_401k', 'add_insurance', 'dental_plan', 'eye_plan', 
                       'health_care_fsa', 'health_insurance', 'optional_life', 'hsa',
                       'loan_repayment', 'dependent_life', 'stock_purchase', 'spousal_life',
-                      'employer_match', 'deposit_amount', 'deposit2_amount']
+                      'employer_match', 'employer_hsa', 'deposit_amount', 'deposit2_amount',
+                      'gross_pay_ytd', 'pre_tax_deductions_ytd', 'employee_taxes_ytd',
+                      'post_tax_deductions_ytd', 'net_pay_ytd']
     
     kwargs = {'id': id}
     for field in numeric_fields:
@@ -232,6 +240,25 @@ def parse_paycheck_text(raw_text):
             result['post_tax_deductions'] = extract_money(money_matches[4])
             result['net_pay'] = extract_money(money_matches[5])
     
+    ytd_line = None
+    for line in lines:
+        line_lower = line.lower()
+        if 'ytd' in line_lower and re.search(r'\b\d{2}\.\d{2}\b', line):
+            money_matches = re.findall(r'([\d,]+\.\d{2})', line)
+            if len(money_matches) >= 5:
+                ytd_line = line
+                break
+    
+    if ytd_line:
+        money_matches = re.findall(r'([\d,]+\.\d{2})', ytd_line)
+        if len(money_matches) >= 6:
+            result['hours_worked_ytd'] = extract_money(money_matches[0])
+            result['gross_pay_ytd'] = extract_money(money_matches[1])
+            result['pre_tax_deductions_ytd'] = extract_money(money_matches[2])
+            result['employee_taxes_ytd'] = extract_money(money_matches[3])
+            result['post_tax_deductions_ytd'] = extract_money(money_matches[4])
+            result['net_pay_ytd'] = extract_money(money_matches[5])
+    
     def get_value_after_label(line, label, default=None):
         idx = line.lower().find(label)
         if idx == -1:
@@ -284,6 +311,12 @@ def parse_paycheck_text(raw_text):
         
         if '401k' in line_lower and 'employer' in line_lower and 'match' in line_lower:
             result['employer_match'] = get_value_after_label(line, 'match')
+        
+        if 'hsa' in line_lower and 'employee' in line_lower:
+            result['hsa'] = get_value_after_label(line, 'hsa')
+        
+        if 'hsa' in line_lower and 'employer' in line_lower:
+            result['employer_hsa'] = get_value_after_label(line, 'hsa')
         
         if 'loan repayment' in line_lower or '401k loan' in line_lower:
             result['loan_repayment'] = get_value_after_label(line, 'loan')
@@ -461,7 +494,9 @@ def save_imported_paycheck():
                      'retirement_401k', 'add_insurance', 'dental_plan', 'eye_plan', 
                      'health_care_fsa', 'health_insurance', 'optional_life', 'hsa',
                      'loan_repayment', 'dependent_life', 'stock_purchase', 'spousal_life',
-                     'employer_match', 'deposit_amount', 'deposit2_amount']
+                     'employer_match', 'employer_hsa', 'deposit_amount', 'deposit2_amount',
+                     'gross_pay_ytd', 'pre_tax_deductions_ytd', 'employee_taxes_ytd',
+                     'post_tax_deductions_ytd', 'net_pay_ytd']
     
     kwargs = {}
     for field in numeric_fields:
@@ -506,6 +541,11 @@ def bills():
     
     payees = db.get_all_payees()
     return render_template('bills.html', bills=bills, payees=payees, filter_type=filter_type)
+
+@app.route('/add_bill')
+def add_bill_form():
+    payees = db.get_all_payees()
+    return render_template('add_bill.html', payees=payees)
 
 @app.route('/add_bill', methods=['POST'])
 def add_bill():
@@ -557,6 +597,10 @@ def payees():
     payees = db.get_all_payees()
     return render_template('payees.html', payees=payees)
 
+@app.route('/add_payee')
+def add_payee_form():
+    return render_template('add_payee.html')
+
 @app.route('/add_payee', methods=['POST'])
 def add_payee():
     db.add_payee(
@@ -592,6 +636,10 @@ def delete_payee(id):
 def bank_accounts():
     accounts = db.get_all_bank_accounts()
     return render_template('bank_accounts.html', accounts=accounts)
+
+@app.route('/add_bank_account')
+def add_bank_account_form():
+    return render_template('add_bank_account.html')
 
 @app.route('/add_bank_account', methods=['POST'])
 def add_bank_account():
@@ -631,6 +679,10 @@ def credit_cards():
     cards = db.get_all_credit_cards()
     return render_template('credit_cards.html', cards=cards)
 
+@app.route('/add_credit_card')
+def add_credit_card_form():
+    return render_template('add_credit_card.html')
+
 @app.route('/add_credit_card', methods=['POST'])
 def add_credit_card():
     db.add_credit_card(
@@ -669,6 +721,10 @@ def budget():
     categories = db.get_budget_categories()
     return render_template('budget.html', categories=categories)
 
+@app.route('/add_budget_category')
+def add_budget_category_form():
+    return render_template('add_budget_category.html')
+
 @app.route('/add_budget_category', methods=['POST'])
 def add_budget_category():
     db.add_budget_category(
@@ -701,4 +757,4 @@ def api_dashboard_stats():
     return jsonify(db.get_dashboard_stats())
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=False)

@@ -4,9 +4,9 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-4">
-        <div class="stat-card bank-balance">
+<div class="row g-3">
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card bank-balance h-100">
             <div class="stat-icon"><i class="bi bi-bank"></i></div>
             <div class="stat-info">
                 <h3>Total Bank Balance</h3>
@@ -14,8 +14,8 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="stat-card credit-debt">
+    <div class="col-sm-6 col-lg-4">
+        <div class="stat-card credit-debt h-100">
             <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
             <div class="stat-info">
                 <h3>Credit Card Debt</h3>
@@ -23,8 +23,8 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="stat-card net-worth">
+    <div class="col-sm-12 col-lg-4">
+        <div class="stat-card net-worth h-100">
             <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
             <div class="stat-info">
                 <h3>Net Position</h3>
@@ -36,9 +36,9 @@
     </div>
 </div>
 
-<div class="row mt-4">
+<div class="row g-3 mt-3">
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header">
                 <h5><i class="bi bi-receipt"></i> Upcoming Bills</h5>
             </div>
@@ -49,7 +49,7 @@
                             {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d') %}
                             {% set today = datetime.now() %}
                             {% set days_until = (due_date - today).days %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <div>
                                     <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
                                     <br><small class="text-muted">{{ bill.due_date }}</small>
@@ -126,32 +126,32 @@
     </div>
 </div>
 
-<div class="row mt-4">
+<div class="row mt-3">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <a href="{{ url_for('paychecks') }}" class="btn btn-outline-primary w-100 mb-2">
-                            <i class="bi bi-plus-circle"></i> Add Paycheck
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('paychecks') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Paycheck</span>
                         </a>
                     </div>
-                    <div class="col-md-3">
-                        <a href="{{ url_for('bills') }}" class="btn btn-outline-success w-100 mb-2">
-                            <i class="bi bi-plus-circle"></i> Add Bill
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_bill_form') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Bill</span>
                         </a>
                     </div>
-                    <div class="col-md-3">
-                        <a href="{{ url_for('bank_accounts') }}" class="btn btn-outline-info w-100 mb-2">
-                            <i class="bi bi-plus-circle"></i> Add Account
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Account</span>
                         </a>
                     </div>
-                    <div class="col-md-3">
-                        <a href="{{ url_for('credit_cards') }}" class="btn btn-outline-warning w-100 mb-2">
-                            <i class="bi bi-plus-circle"></i> Add Credit Card
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Card</span>
                         </a>
                     </div>
                 </div>

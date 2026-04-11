@@ -5,55 +5,18 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-lg-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="bi bi-person-plus"></i> Add New Payee</h5>
-            </div>
-            <div class="card-body">
-                <form action="{{ url_for('add_payee') }}" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" name="name" class="form-control" required placeholder="Company or person name">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <select name="category" class="form-select">
-                            <option value="">-- Select Category --</option>
-                            <option value="utilities">Utilities</option>
-                            <option value="rent">Rent/Mortgage</option>
-                            <option value="insurance">Insurance</option>
-                            <option value="subscriptions">Subscriptions</option>
-                            <option value="phone">Phone/Internet</option>
-                            <option value="medical">Medical</option>
-                            <option value="auto">Auto/Transportation</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Account Number</label>
-                        <input type="text" name="account_number" class="form-control" placeholder="Optional">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Website</label>
-                        <input type="url" name="website" class="form-control" placeholder="https://example.com">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Add Payee</button>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-8">
+    <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-people"></i> Payees List</h5>
-                <input type="text" id="searchPayees" class="form-control" placeholder="Search payees..." style="width: auto;">
+                <a href="{{ url_for('add_payee_form') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add New Payee
+                </a>
             </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" id="searchPayees" class="form-control" placeholder="Search payees...">
+                </div>
             <div class="card-body">
                 {% if payees %}
                     <div class="table-responsive">
@@ -106,6 +69,40 @@
                 {% else %}
                     <p class="text-muted text-center py-4">No payees found. Add your first payee to start tracking bills.</p>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('paychecks') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Paycheck</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_bill_form') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Bill</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Account</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Card</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

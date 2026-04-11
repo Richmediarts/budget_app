@@ -5,52 +5,8 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-lg-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="bi bi-plus-circle"></i> Add Credit Card</h5>
-            </div>
-            <div class="card-body">
-                <form action="{{ url_for('add_credit_card') }}" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Card Name</label>
-                        <input type="text" name="name" class="form-control" required placeholder="e.g., Chase Sapphire">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Last 4 Digits</label>
-                        <input type="text" name="last_four" class="form-control" maxlength="4" placeholder="1234">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Credit Limit</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" step="0.01" name="credit_limit" class="form-control" required placeholder="0.00">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Current Balance</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" step="0.01" name="current_balance" class="form-control" required placeholder="0.00">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Interest Rate (APR)</label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" name="interest_rate" class="form-control" placeholder="0.00">
-                            <span class="input-group-text">%</span>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Website</label>
-                        <input type="url" name="website" class="form-control" placeholder="https://creditcard.com">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Add Card</button>
-                </form>
-            </div>
-        </div>
-        
-        <div class="card bg-danger text-white">
+    <div class="col-12">
+        <div class="card bg-danger text-white mb-3">
             <div class="card-body text-center">
                 <h5>Total Credit Card Debt</h5>
                 <h2 class="mb-0">${{ "%.2f"|format(total_debt) }}</h2>
@@ -58,10 +14,13 @@
         </div>
     </div>
     
-    <div class="col-lg-8">
+    <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-credit-card"></i> Your Credit Cards</h5>
+                <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Credit Card
+                </a>
             </div>
             <div class="card-body">
                 {% if cards %}
@@ -126,6 +85,40 @@
                 {% else %}
                     <p class="text-muted text-center py-4">No credit cards added yet. Add your first card to track your credit utilization.</p>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('paychecks') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Paycheck</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_bill_form') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Bill</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Account</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Card</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

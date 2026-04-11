@@ -6,6 +6,21 @@ document.addEventListener('DOMContentLoaded', function() {
             bsAlert.close();
         }, 5000);
     });
+    
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    if (isTouchDevice) {
+        document.body.classList.add('touch-device');
+    }
+    
+    const inputs = document.querySelectorAll('input[type="number"], input[type="text"]');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            setTimeout(() => {
+                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        });
+    });
 });
 
 function formatCurrency(amount) {
@@ -52,4 +67,16 @@ deleteLinks.forEach(link => {
             e.preventDefault();
         }
     });
+});
+
+window.addEventListener('resize', function() {
+    const offcanvas = document.getElementById('mobileSidebar');
+    if (offcanvas && offcanvas.classList.contains('show')) {
+        if (window.innerWidth >= 768) {
+            const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvas);
+            if (bsOffcanvas) {
+                bsOffcanvas.hide();
+            }
+        }
+    }
 });

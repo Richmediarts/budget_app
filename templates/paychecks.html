@@ -465,6 +465,18 @@
                                     <input type="number" step="0.01" name="post_tax_deductions" class="form-control" value="{{ parsed_data.post_tax_deductions or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Pre-Tax Ded. YTD</label>
+                                    <input type="number" step="0.01" name="pre_tax_deductions_ytd" class="form-control" value="{{ parsed_data.pre_tax_deductions_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Emp. Taxes YTD</label>
+                                    <input type="number" step="0.01" name="employee_taxes_ytd" class="form-control" value="{{ parsed_data.employee_taxes_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Post-Tax Ded. YTD</label>
+                                    <input type="number" step="0.01" name="post_tax_deductions_ytd" class="form-control" value="{{ parsed_data.post_tax_deductions_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">FSA</label>
                                     <input type="number" step="0.01" name="health_care_fsa" class="form-control" value="{{ parsed_data.health_care_fsa or '0' }}">
                                 </div>
@@ -475,6 +487,10 @@
                                 <div class="col-md-2">
                                     <label class="form-label">Employer Match</label>
                                     <input type="number" step="0.01" name="employer_match" class="form-control" value="{{ parsed_data.employer_match or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Employer HSA</label>
+                                    <input type="number" step="0.01" name="employer_hsa" class="form-control" value="{{ parsed_data.employer_hsa or '0' }}">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Bank Name</label>
@@ -1138,6 +1154,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" step="0.01" name="employer_match" class="form-control" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">Employer HSA Contribution</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="employer_hsa" class="form-control" value="0" placeholder="0.00">
                     </div>
                 </div>
                 
