@@ -38,6 +38,18 @@ def get_payslip(paycheck_id):
         return jsonify(pc)
     return jsonify({'error': 'Paycheck not found'}), 404
 
+@app.route('/add_paycheck', methods=['GET'])
+def add_paycheck_form():
+    import json
+    prefill = {}
+    if request.args.get('prefill'):
+        try:
+            prefill = json.loads(request.args.get('prefill'))
+        except:
+            pass
+    return render_template('add_paycheck.html', paycheck=prefill)
+
+
 @app.route('/add_paycheck', methods=['POST'])
 def add_paycheck():
     db.add_paycheck(
@@ -755,6 +767,42 @@ def delete_budget_category(id):
 @app.route('/api/dashboard_stats')
 def api_dashboard_stats():
     return jsonify(db.get_dashboard_stats())
+
+
+@app.route('/import_paycheck_pdf', methods=['POST'])
+def import_paycheck_pdf():
+    if 'pdf_file' not in request.files:
+        flash('No file uploaded', 'danger')
+        return redirect(url_for('paychecks', active_tab='import'))
+    file = request.files['pdf_file']
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(url_for('paychecks', active_tab='import'))
+    if file and file.filename.endswith('.pdf'):
+        import os
+        import uuid
+        import re
+        upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, f'{uuid.uuid4()}_{file.filename}')
+        file.save(file_path)
+        
+        try:
+            from pypdf import PdfReader
+            text = PdfReader(file_path).pages[0].extract_text()
+        except:
+            flash('Error reading PDF', 'danger')
+            return redirect(url_for('paychecks', active_tab='import'))
+        
+        os.remove(file_path)
+        
+        data = parse_paycheck_text(text)
+        import json
+        return redirect(url_for('paychecks', active_tab='import', edit_paycheck=data))
+    
+    flash('Invalid file type', 'danger')
+    return redirect(url_for('paychecks', active_tab='import'))
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)
