@@ -27,3 +27,14 @@
 10.0.0.172 - - [19/Apr/2026 13:59:44] "GET /paychecks HTTP/1.1" 200 -
 10.0.0.172 - - [19/Apr/2026 13:59:44] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
 10.0.0.172 - - [19/Apr/2026 13:59:44] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:00:45] "POST /import_paycheck HTTP/1.1" 200 -
+10.0.0.172 - - [19/Apr/2026 14:00:45] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:00:45] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:00:52] "GET /payees HTTP/1.1" 200 -
+10.0.0.172 - - [19/Apr/2026 14:00:53] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:00:55] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:01:02] "[32mPOST /save_imported_paycheck HTTP/1.1[0m" 302 -
+10.0.0.172 - - [19/Apr/2026 14:01:02] "GET /paychecks HTTP/1.1" 200 -
+10.0.0.172 - - [19/Apr/2026 14:01:02] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:01:02] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+10.0.0.172 - - [19/Apr/2026 14:01:02] "GET /api/payslip/15 HTTP/1.1" 200 -

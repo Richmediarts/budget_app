@@ -255,7 +255,7 @@ def parse_paycheck_text(raw_text):
     ytd_line = None
     for line in lines:
         line_lower = line.lower()
-        if 'ytd' in line_lower and re.search(r'\b\d{2}\.\d{2}\b', line):
+        if 'ytd' in line_lower and re.search(r'^\s*YTD', line):
             money_matches = re.findall(r'([\d,]+\.\d{2})', line)
             if len(money_matches) >= 5:
                 ytd_line = line
