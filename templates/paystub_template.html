@@ -196,11 +196,11 @@
 
   <div class="summary-row ytd">
     <div class="sc">YTD</div>
-    <div class="sc">—</div>
-    <div class="sc">—</div>
-    <div class="sc">—</div>
-    <div class="sc">—</div>
-    <div class="sc">—</div>
+    <div class="sc">{{ pc.hours_worked_ytd|default('0') }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.gross_pay_ytd|default(0)) }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.pre_tax_deductions_ytd|default(0)) }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.employee_taxes_ytd|default(0)) }}</div>
+    <div class="sc">${{ "%.2f"|format(pc.post_tax_deductions_ytd|default(0)) }}</div>
   </div>
 
   <!-- BODY -->
@@ -214,7 +214,7 @@
       </div>
       <div class="ytd-note">
         Year-to-Date Net Pay
-        <span>—</span>
+        <span>${{ "%.2f"|format(pc.net_pay_ytd|default(0)) }}</span>
       </div>
     </div>
 
@@ -336,32 +336,32 @@
           </thead>
           <tbody>
             {% if pc.retirement_401k|default(0) > 0 %}
-            <tr><td>401k Savings Plan</td><td>${{ "%.2f"|format(pc.retirement_401k|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>401k Savings Plan</td><td>${{ "%.2f"|format(pc.retirement_401k|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.retirement_401k_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.health_insurance|default(0) > 0 %}
-            <tr><td>Medical</td><td>${{ "%.2f"|format(pc.health_insurance|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Medical</td><td>${{ "%.2f"|format(pc.health_insurance|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.health_insurance_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.dental_plan|default(0) > 0 %}
-            <tr><td>Dental Plan</td><td>${{ "%.2f"|format(pc.dental_plan|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Dental Plan</td><td>${{ "%.2f"|format(pc.dental_plan|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.dental_plan_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.eye_plan|default(0) > 0 %}
-            <tr><td>Eye Plan</td><td>${{ "%.2f"|format(pc.eye_plan|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Eye Plan</td><td>${{ "%.2f"|format(pc.eye_plan|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.eye_plan_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.health_care_fsa|default(0) > 0 %}
-            <tr><td>Health Care FSA</td><td>${{ "%.2f"|format(pc.health_care_fsa|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Health Care FSA</td><td>${{ "%.2f"|format(pc.health_care_fsa|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.health_care_fsa_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.optional_life|default(0) > 0 %}
-            <tr><td>Optional Life</td><td>${{ "%.2f"|format(pc.optional_life|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Optional Life</td><td>${{ "%.2f"|format(pc.optional_life|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.optional_life_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.add_insurance|default(0) > 0 %}
-            <tr><td>ADD Insurance</td><td>${{ "%.2f"|format(pc.add_insurance|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>ADD Insurance</td><td>${{ "%.2f"|format(pc.add_insurance|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.add_insurance_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.hsa|default(0) > 0 %}
-            <tr><td>HSA</td><td>${{ "%.2f"|format(pc.hsa|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>HSA</td><td>${{ "%.2f"|format(pc.hsa|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.hsa_ytd|default(0)) }}</td></tr>
             {% endif %}
           </tbody>
           <tfoot>
-            <tr><td>Total</td><td>${{ "%.2f"|format(pc.pre_tax_deductions|default(0)) }}</td><td>—</td></tr>
+            <tr><td>Total</td><td>${{ "%.2f"|format(pc.pre_tax_deductions|default(0)) }}</td><td>${{ "%.2f"|format(pc.pre_tax_deductions_ytd|default(0)) }}</td></tr>
           </tfoot>
         </table>
       </div>
@@ -379,20 +379,20 @@
           </thead>
           <tbody>
             {% if pc.loan_repayment|default(0) > 0 %}
-            <tr><td>401K Loan Repayment (Loan 1)</td><td>${{ "%.2f"|format(pc.loan_repayment|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>401K Loan Repayment (Loan 1)</td><td>${{ "%.2f"|format(pc.loan_repayment|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.loan_repayment_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.stock_purchase|default(0) > 0 %}
-            <tr><td>Employee Stock Purchase</td><td>${{ "%.2f"|format(pc.stock_purchase|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Employee Stock Purchase</td><td>${{ "%.2f"|format(pc.stock_purchase|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.stock_purchase_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.spousal_life|default(0) > 0 %}
-            <tr><td>Spousal Life Insurance</td><td>${{ "%.2f"|format(pc.spousal_life|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Spousal Life Insurance</td><td>${{ "%.2f"|format(pc.spousal_life|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.spousal_life_ytd|default(0)) }}</td></tr>
             {% endif %}
             {% if pc.dependent_life|default(0) > 0 %}
-            <tr><td>Dependent Life Insurance</td><td>${{ "%.2f"|format(pc.dependent_life|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>Dependent Life Insurance</td><td>${{ "%.2f"|format(pc.dependent_life|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.dependent_life_ytd|default(0)) }}</td></tr>
             {% endif %}
           </tbody>
           <tfoot>
-            <tr><td>Total</td><td>${{ "%.2f"|format(pc.post_tax_deductions|default(0)) }}</td><td>—</td></tr>
+            <tr><td>Total</td><td>${{ "%.2f"|format(pc.post_tax_deductions|default(0)) }}</td><td>${{ "%.2f"|format(pc.post_tax_deductions_ytd|default(0)) }}</td></tr>
           </tfoot>
         </table>
       </div>
@@ -411,20 +411,20 @@
         </thead>
         <tbody>
           {% if pc.federal_tax|default(0) > 0 %}
-          <tr><td>Federal Withholding</td><td>${{ "%.2f"|format(pc.federal_tax|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          <tr><td>Federal Withholding</td><td>${{ "%.2f"|format(pc.federal_tax|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.federal_tax_ytd|default(0)) }}</td></tr>
           {% endif %}
           {% if pc.state_tax|default(0) > 0 %}
-          <tr><td>State Tax – {{ pc.state_name|default('GA') }}</td><td>${{ "%.2f"|format(pc.state_tax|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          <tr><td>State Tax – {{ pc.state_name|default('GA') }}</td><td>${{ "%.2f"|format(pc.state_tax|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.state_tax_ytd|default(0)) }}</td></tr>
           {% endif %}
           {% if pc.oasdi|default(0) > 0 %}
-          <tr><td>OASDI</td><td>${{ "%.2f"|format(pc.oasdi|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          <tr><td>OASDI</td><td>${{ "%.2f"|format(pc.oasdi|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.oasdi_ytd|default(0)) }}</td></tr>
           {% endif %}
           {% if pc.medicare|default(0) > 0 %}
-          <tr><td>Medicare</td><td>${{ "%.2f"|format(pc.medicare|default(0)) }}</td><td class="ytd-val">—</td></tr>
+          <tr><td>Medicare</td><td>${{ "%.2f"|format(pc.medicare|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.medicare_ytd|default(0)) }}</td></tr>
           {% endif %}
         </tbody>
         <tfoot>
-          <tr><td>Total Employee Taxes</td><td>${{ "%.2f"|format(pc.employee_taxes|default(0)) }}</td><td>—</td></tr>
+          <tr><td>Total Employee Taxes</td><td>${{ "%.2f"|format(pc.employee_taxes|default(0)) }}</td><td>${{ "%.2f"|format(pc.employee_taxes_ytd|default(0)) }}</td></tr>
         </tfoot>
       </table>
     </div>
@@ -444,11 +444,11 @@
           </thead>
           <tbody>
             {% if pc.employer_match|default(0) > 0 %}
-            <tr><td>401K Employer Match</td><td>${{ "%.2f"|format(pc.employer_match|default(0)) }}</td><td class="ytd-val">—</td></tr>
+            <tr><td>401K Employer Match</td><td>${{ "%.2f"|format(pc.employer_match|default(0)) }}</td><td class="ytd-val">${{ "%.2f"|format(pc.employer_match_ytd|default(0)) }}</td></tr>
             {% endif %}
           </tbody>
           <tfoot>
-            <tr><td>Total</td><td>${{ "%.2f"|format(pc.employer_match|default(0)) }}</td><td>—</td></tr>
+            <tr><td>Total</td><td>${{ "%.2f"|format(pc.employer_match|default(0)) }}</td><td>${{ "%.2f"|format(pc.employer_match_ytd|default(0)) }}</td></tr>
           </tfoot>
         </table>
       </div>
