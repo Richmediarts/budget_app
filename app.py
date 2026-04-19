@@ -271,14 +271,17 @@ def parse_paycheck_text(raw_text):
             result['post_tax_deductions_ytd'] = extract_money(money_matches[4])
             result['net_pay_ytd'] = extract_money(money_matches[5])
     
-    def get_value_after_label(line, label, default=None):
+    def get_value_after_label(line, label, default=None, ytd=False):
         idx = line.lower().find(label)
         if idx == -1:
             return default
         after_label = line[idx + len(label):]
-        match = re.search(r'([\d,]+\.\d{2})', after_label)
-        if match:
-            return extract_money(match.group(1))
+        matches = re.findall(r'([\d,]+\.\d{2})', after_label)
+        if matches:
+            idx = 1 if ytd else 0
+            if idx < len(matches):
+                return extract_money(matches[idx])
+            return extract_money(matches[0])
         return default
     
     for i, line in enumerate(lines):
@@ -286,27 +289,35 @@ def parse_paycheck_text(raw_text):
         
         if any(x in line_lower for x in ['401k savings plan', '401(k) savings plan']):
             result['retirement_401k'] = get_value_after_label(line, '401k')
+            result['retirement_401k_ytd'] = get_value_after_label(line, '401k', ytd=True)
         
         if 'medical' in line_lower and ('plan' in line_lower or 'ins' in line_lower):
             result['health_insurance'] = get_value_after_label(line, 'medical')
+            result['health_insurance_ytd'] = get_value_after_label(line, 'medical', ytd=True)
         
         if 'dental plan' in line_lower:
             result['dental_plan'] = get_value_after_label(line, 'dental')
+            result['dental_plan_ytd'] = get_value_after_label(line, 'dental', ytd=True)
         
         if 'eye plan' in line_lower:
             result['eye_plan'] = get_value_after_label(line, 'eye')
+            result['eye_plan_ytd'] = get_value_after_label(line, 'eye', ytd=True)
         
         if 'health care fsa' in line_lower:
             result['health_care_fsa'] = get_value_after_label(line, 'fsa')
+            result['health_care_fsa_ytd'] = get_value_after_label(line, 'fsa', ytd=True)
         
         if 'optional life' in line_lower:
             result['optional_life'] = get_value_after_label(line, 'optional life')
+            result['optional_life_ytd'] = get_value_after_label(line, 'optional life', ytd=True)
         
         if 'add insurance' in line_lower:
             result['add_insurance'] = get_value_after_label(line, 'add')
+            result['add_insurance_ytd'] = get_value_after_label(line, 'add', ytd=True)
         
         if 'federal withholding' in line_lower and 'taxable' not in line_lower:
             result['federal_tax'] = get_value_after_label(line, 'federal withholding')
+            result['federal_tax_ytd'] = get_value_after_label(line, 'federal withholding', ytd=True)
         
         if ('state tax' in line_lower or 'ga withholding' in line_lower or 'withholding' in line_lower or 'ga' in line_lower) and 'federal' not in line_lower and 'taxable' not in line_lower:
             if 'federal' not in line_lower:
@@ -314,54 +325,71 @@ def parse_paycheck_text(raw_text):
                 if tax_val:
                     result['state_tax'] = tax_val
                     result['state_name'] = 'GA'
+                    result['state_tax_ytd'] = get_value_after_label(line, 'state', ytd=True) or get_value_after_label(line, 'withholding', ytd=True)
         
         if 'oasdi' in line_lower and 'taxable' not in line_lower and 'social security' not in line_lower:
             result['oasdi'] = get_value_after_label(line, 'oasdi')
+            result['oasdi_ytd'] = get_value_after_label(line, 'oasdi', ytd=True)
         
         if re.search(r'medicare', line_lower) and 'taxable' not in line_lower:
             result['medicare'] = get_value_after_label(line, 'medicare')
+            result['medicare_ytd'] = get_value_after_label(line, 'medicare', ytd=True)
         
         if '401k' in line_lower and 'employer' in line_lower and 'match' in line_lower:
             result['employer_match'] = get_value_after_label(line, 'match')
+            result['employer_match_ytd'] = get_value_after_label(line, 'match', ytd=True)
         
         if 'hsa' in line_lower and 'employee' in line_lower:
             result['hsa'] = get_value_after_label(line, 'hsa')
+            result['hsa_ytd'] = get_value_after_label(line, 'hsa', ytd=True)
         
         if 'hsa' in line_lower and 'employer' in line_lower:
             result['employer_hsa'] = get_value_after_label(line, 'hsa')
+            result['employer_hsa_ytd'] = get_value_after_label(line, 'hsa', ytd=True)
         
         if 'loan repayment' in line_lower or '401k loan' in line_lower:
             result['loan_repayment'] = get_value_after_label(line, 'loan')
+            result['loan_repayment_ytd'] = get_value_after_label(line, 'loan', ytd=True)
         
         if 'dependent life' in line_lower:
             result['dependent_life'] = get_value_after_label(line, 'dependent life')
+            result['dependent_life_ytd'] = get_value_after_label(line, 'dependent life', ytd=True)
         
         if 'stock purchase' in line_lower or 'employee stock' in line_lower:
             result['stock_purchase'] = get_value_after_label(line, 'stock')
+            result['stock_purchase_ytd'] = get_value_after_label(line, 'stock', ytd=True)
         
         if 'spousal life' in line_lower:
             result['spousal_life'] = get_value_after_label(line, 'spousal life')
+            result['spousal_life_ytd'] = get_value_after_label(line, 'spousal life', ytd=True)
         
         if 'biometric credit' in line_lower and 'spousal' not in line_lower:
             result['biometric_credit'] = get_value_after_label(line, 'biometric')
+            result['biometric_credit_ytd'] = get_value_after_label(line, 'biometric', ytd=True)
         
         if 'spousal biometric credit' in line_lower:
             result['spousal_biometric'] = get_value_after_label(line, 'spousal biometric')
+            result['spousal_biometric_ytd'] = get_value_after_label(line, 'spousal biometric', ytd=True)
         
         if 'group term life' in line_lower:
             result['group_term_life'] = get_value_after_label(line, 'group term')
+            result['group_term_life_ytd'] = get_value_after_label(line, 'group term', ytd=True)
         
         if 'floating holiday' in line_lower:
             result['floating_holiday'] = get_value_after_label(line, 'floating holiday')
+            result['floating_holiday_ytd'] = get_value_after_label(line, 'floating holiday', ytd=True)
         
         if re.search(r'\bholiday\b', line_lower) and 'holiday pay' not in line_lower and 'floating' not in line_lower:
             result['holiday_pay'] = get_value_after_label(line, 'holiday')
+            result['holiday_pay_ytd'] = get_value_after_label(line, 'holiday', ytd=True)
         
         if re.search(r'^vacation\s', line_lower):
             result['vacation_pay'] = get_value_after_label(line, 'vacation')
+            result['vacation_pay_ytd'] = get_value_after_label(line, 'vacation', ytd=True)
         
         if re.search(r'^salary\s', line_lower):
             result['salary'] = get_value_after_label(line, 'salary')
+            result['salary_ytd'] = get_value_after_label(line, 'salary', ytd=True)
         
         if 'pnc' in line_lower:
             result['bank_name'] = 'PNC Bank'
