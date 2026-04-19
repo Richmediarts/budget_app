@@ -407,16 +407,32 @@
                                     <input type="number" step="0.01" name="salary" class="form-control" value="{{ parsed_data.salary or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Salary YTD</label>
+                                    <input type="number" step="0.01" name="salary_ytd" class="form-control" value="{{ parsed_data.salary_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Vacation Pay</label>
                                     <input type="number" step="0.01" name="vacation_pay" class="form-control" value="{{ parsed_data.vacation_pay or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Vacation YTD</label>
+                                    <input type="number" step="0.01" name="vacation_pay_ytd" class="form-control" value="{{ parsed_data.vacation_pay_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Holiday Pay</label>
                                     <input type="number" step="0.01" name="holiday_pay" class="form-control" value="{{ parsed_data.holiday_pay or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Holiday YTD</label>
+                                    <input type="number" step="0.01" name="holiday_pay_ytd" class="form-control" value="{{ parsed_data.holiday_pay_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Floating Holiday</label>
                                     <input type="number" step="0.01" name="floating_holiday" class="form-control" value="{{ parsed_data.floating_holiday or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Float H. YTD</label>
+                                    <input type="number" step="0.01" name="floating_holiday_ytd" class="form-control" value="{{ parsed_data.floating_holiday_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Biometric Credit</label>
@@ -437,44 +453,88 @@
                                     <input type="number" step="0.01" name="federal_tax" class="form-control" value="{{ parsed_data.federal_tax or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Fed. Tax YTD</label>
+                                    <input type="number" step="0.01" name="federal_tax_ytd" class="form-control" value="{{ parsed_data.federal_tax_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">State Tax</label>
                                     <input type="number" step="0.01" name="state_tax" class="form-control" value="{{ parsed_data.state_tax or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">State Tax YTD</label>
+                                    <input type="number" step="0.01" name="state_tax_ytd" class="form-control" value="{{ parsed_data.state_tax_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">OASDI</label>
                                     <input type="number" step="0.01" name="oasdi" class="form-control" value="{{ parsed_data.oasdi or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">OASDI YTD</label>
+                                    <input type="number" step="0.01" name="oasdi_ytd" class="form-control" value="{{ parsed_data.oasdi_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Medicare</label>
                                     <input type="number" step="0.01" name="medicare" class="form-control" value="{{ parsed_data.medicare or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Medicare YTD</label>
+                                    <input type="number" step="0.01" name="medicare_ytd" class="form-control" value="{{ parsed_data.medicare_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">401(k)</label>
                                     <input type="number" step="0.01" name="retirement_401k" class="form-control" value="{{ parsed_data.retirement_401k or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">401(k) YTD</label>
+                                    <input type="number" step="0.01" name="retirement_401k_ytd" class="form-control" value="{{ parsed_data.retirement_401k_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Medical</label>
                                     <input type="number" step="0.01" name="health_insurance" class="form-control" value="{{ parsed_data.health_insurance or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Medical YTD</label>
+                                    <input type="number" step="0.01" name="health_insurance_ytd" class="form-control" value="{{ parsed_data.health_insurance_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Dental</label>
                                     <input type="number" step="0.01" name="dental_plan" class="form-control" value="{{ parsed_data.dental_plan or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Dental YTD</label>
+                                    <input type="number" step="0.01" name="dental_plan_ytd" class="form-control" value="{{ parsed_data.dental_plan_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Vision</label>
                                     <input type="number" step="0.01" name="eye_plan" class="form-control" value="{{ parsed_data.eye_plan or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Vision YTD</label>
+                                    <input type="number" step="0.01" name="eye_plan_ytd" class="form-control" value="{{ parsed_data.eye_plan_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Pre-Tax Deductions</label>
                                     <input type="number" step="0.01" name="pre_tax_deductions" class="form-control" value="{{ parsed_data.pre_tax_deductions or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Pre-Tax YTD</label>
+                                    <input type="number" step="0.01" name="pre_tax_deductions_ytd" class="form-control" value="{{ parsed_data.pre_tax_deductions_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Employee Taxes</label>
                                     <input type="number" step="0.01" name="employee_taxes" class="form-control" value="{{ parsed_data.employee_taxes or '0' }}">
                                 </div>
                                 <div class="col-md-2">
+                                    <label class="form-label">Emp. Tax YTD</label>
+                                    <input type="number" step="0.01" name="employee_taxes_ytd" class="form-control" value="{{ parsed_data.employee_taxes_ytd or '0' }}">
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Post-Tax Deductions</label>
                                     <input type="number" step="0.01" name="post_tax_deductions" class="form-control" value="{{ parsed_data.post_tax_deductions or '0' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Post-Tax YTD</label>
+                                    <input type="number" step="0.01" name="post_tax_deductions_ytd" class="form-control" value="{{ parsed_data.post_tax_deductions_ytd or '0' }}">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Pre-Tax Ded. YTD</label>

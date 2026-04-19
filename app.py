@@ -536,7 +536,14 @@ def save_imported_paycheck():
                      'loan_repayment', 'dependent_life', 'stock_purchase', 'spousal_life',
                      'employer_match', 'employer_hsa', 'deposit_amount', 'deposit2_amount',
                      'gross_pay_ytd', 'pre_tax_deductions_ytd', 'employee_taxes_ytd',
-                     'post_tax_deductions_ytd', 'net_pay_ytd']
+                     'post_tax_deductions_ytd', 'net_pay_ytd', 'hours_worked_ytd',
+                     'salary_ytd', 'vacation_pay_ytd', 'biometric_credit_ytd', 'spousal_biometric_ytd',
+                     'group_term_life_ytd', 'floating_holiday_ytd', 'holiday_pay_ytd',
+                     'retirement_401k_ytd', 'health_insurance_ytd', 'dental_plan_ytd', 'eye_plan_ytd',
+                     'health_care_fsa_ytd', 'optional_life_ytd', 'add_insurance_ytd', 'hsa_ytd',
+                     'federal_tax_ytd', 'state_tax_ytd', 'oasdi_ytd', 'medicare_ytd',
+                     'loan_repayment_ytd', 'dependent_life_ytd', 'stock_purchase_ytd', 'spousal_life_ytd',
+                     'employer_match_ytd', 'employer_hsa_ytd']
     
     kwargs = {}
     for field in numeric_fields:
