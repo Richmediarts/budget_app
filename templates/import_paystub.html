@@ -24,7 +24,7 @@
             </div>
         </div>
 
-        {% if parsed_data %}
+        {% if parsed_data and parsed_data.salary %}
         <div class="card mt-4">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-check-circle"></i> Extracted Paystub Data</h5>
@@ -37,19 +37,35 @@
             </div>
             <div class="card-body">
                 <h6 class="text-muted border-bottom pb-2 mb-3">Summary</h6>
-                <table class="table table-sm table-bordered">
-                    {% for row in parsed_data.summary %}
-                    <tr><th class="w-50">{{ row[0] }}</th><td>{{ row[1] }}</td></tr>
-                    {% endfor %}
+                <table class="table table-sm table-bordered mb-4">
+                    <tr><th class="w-50">Employee Name</th><td>{{ parsed_data.employee_name or 'N/A' }}</td></tr>
+                    <tr><th>Employee ID</th><td>{{ parsed_data.employee_id or 'N/A' }}</td></tr>
+                    <tr><th>Company</th><td>{{ parsed_data.company or 'N/A' }}</td></tr>
+                    <tr><th>Pay Period</th><td>{{ parsed_data.pay_period_begin or '' }} - {{ parsed_data.pay_period_end or '' }}</td></tr>
+                    <tr><th>Check Date</th><td>{{ parsed_data.check_date or 'N/A' }}</td></tr>
+                    <tr><th>Hours Worked</th><td>{{ parsed_data.hours_worked or '0' }}</td></tr>
+                    <tr><th>Gross Pay</th><td>${{ "%.2f"|format(parsed_data.gross_pay|default(0)) }}</td></tr>
+                    <tr><th>Net Pay</th><td>${{ "%.2f"|format(parsed_data.net_pay|default(0)) }}</td></tr>
                 </table>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Earnings</h6>
                 <table class="table table-sm table-bordered">
-                    <thead><tr><th>Description</th><th>Dates</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead>
+                    <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
-                    {% for row in parsed_data.earnings %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                    {% endfor %}
+                    {% if parsed_data.salary %}
+                    <tr><td>Salary</td><td>${{ "%.2f"|format(parsed_data.salary) }}</td><td>${{ "%.2f"|format(parsed_data.salary_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.vacation_pay %}
+                    <tr><td>Vacation Pay</td><td>${{ "%.2f"|format(parsed_data.vacation_pay) }}</td><td>${{ "%.2f"|format(parsed_data.vacation_pay_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.holiday_pay %}
+                    <tr><td>Holiday Pay</td><td>${{ "%.2f"|format(parsed_data.holiday_pay) }}</td><td>${{ "%.2f"|format(parsed_data.holiday_pay_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.floating_holiday %}
+                    <tr><td>Floating Holiday</td><td>${{ "%.2f"|format(parsed_data.floating_holiday) }}</td><td>${{ "%.2f"|format(parsed_data.floating_holiday_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.biometric_credit %}
+                    <tr><td>Biometric Credit</td><td>${{ "%.2f"|format(parsed_data.biometric_credit) }}</td><td>${{ "%.2f"|format(parsed_data.biometric_credit_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.spousal_biometric %}
+                    <tr><td>Spousal Biometric</td><td>${{ "%.2f"|format(parsed_data.spousal_biometric) }}</td><td>${{ "%.2f"|format(parsed_data.spousal_biometric_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.group_term_life %}
+                    <tr><td>Group Term Life</td><td>${{ "%.2f"|format(parsed_data.group_term_life) }}</td><td>${{ "%.2f"|format(parsed_data.group_term_life_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
 
@@ -57,9 +73,14 @@
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
-                    {% for row in parsed_data.taxes %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                    {% endfor %}
+                    {% if parsed_data.federal_tax %}
+                    <tr><td>Federal Withholding</td><td>${{ "%.2f"|format(parsed_data.federal_tax) }}</td><td>${{ "%.2f"|format(parsed_data.federal_tax_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.state_tax %}
+                    <tr><td>State Tax - {{ parsed_data.state_name or 'GA' }}</td><td>${{ "%.2f"|format(parsed_data.state_tax) }}</td><td>${{ "%.2f"|format(parsed_data.state_tax_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.oasdi %}
+                    <tr><td>OASDI</td><td>${{ "%.2f"|format(parsed_data.oasdi) }}</td><td>${{ "%.2f"|format(parsed_data.oasdi_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.medicare %}
+                    <tr><td>Medicare</td><td>${{ "%.2f"|format(parsed_data.medicare) }}</td><td>${{ "%.2f"|format(parsed_data.medicare_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
 
@@ -67,9 +88,20 @@
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
-                    {% for row in parsed_data.preTax %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                    {% endfor %}
+                    {% if parsed_data.retirement_401k %}
+                    <tr><td>401k Savings Plan</td><td>${{ "%.2f"|format(parsed_data.retirement_401k) }}</td><td>${{ "%.2f"|format(parsed_data.retirement_401k_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.health_insurance %}
+                    <tr><td>Medical</td><td>${{ "%.2f"|format(parsed_data.health_insurance) }}</td><td>${{ "%.2f"|format(parsed_data.health_insurance_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.dental_plan %}
+                    <tr><td>Dental Plan</td><td>${{ "%.2f"|format(parsed_data.dental_plan) }}</td><td>${{ "%.2f"|format(parsed_data.dental_plan_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.eye_plan %}
+                    <tr><td>Eye Plan</td><td>${{ "%.2f"|format(parsed_data.eye_plan) }}</td><td>${{ "%.2f"|format(parsed_data.eye_plan_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.health_care_fsa %}
+                    <tr><td>Health Care FSA</td><td>${{ "%.2f"|format(parsed_data.health_care_fsa) }}</td><td>${{ "%.2f"|format(parsed_data.health_care_fsa_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.optional_life %}
+                    <tr><td>Optional Life</td><td>${{ "%.2f"|format(parsed_data.optional_life) }}</td><td>${{ "%.2f"|format(parsed_data.optional_life_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.add_insurance %}
+                    <tr><td>ADD Insurance</td><td>${{ "%.2f"|format(parsed_data.add_insurance) }}</td><td>${{ "%.2f"|format(parsed_data.add_insurance_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
 
@@ -77,33 +109,36 @@
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
-                    {% for row in parsed_data.postTax %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                    {% endfor %}
+                    {% if parsed_data.loan_repayment %}
+                    <tr><td>401K Loan Repayment</td><td>${{ "%.2f"|format(parsed_data.loan_repayment) }}</td><td>${{ "%.2f"|format(parsed_data.loan_repayment_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.stock_purchase %}
+                    <tr><td>Employee Stock Purchase</td><td>${{ "%.2f"|format(parsed_data.stock_purchase) }}</td><td>${{ "%.2f"|format(parsed_data.stock_purchase_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.spousal_life %}
+                    <tr><td>Spousal Life Insurance</td><td>${{ "%.2f"|format(parsed_data.spousal_life) }}</td><td>${{ "%.2f"|format(parsed_data.spousal_life_ytd|default(0)) }}</td></tr>{% endif %}
+                    {% if parsed_data.dependent_life %}
+                    <tr><td>Dependent Life Insurance</td><td>${{ "%.2f"|format(parsed_data.dependent_life) }}</td><td>${{ "%.2f"|format(parsed_data.dependent_life_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
 
-                <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Employer Paid Benefits</h6>
+                <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Employer Benefits</h6>
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
-                    {% for row in parsed_data.benefits %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                    {% endfor %}
+                    {% if parsed_data.employer_match %}
+                    <tr><td>401K Employer Match</td><td>${{ "%.2f"|format(parsed_data.employer_match) }}</td><td>${{ "%.2f"|format(parsed_data.employer_match_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
 
-                <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Direct Deposit</h6>
+                <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">YTD Summary</h6>
                 <table class="table table-sm table-bordered">
-                    <thead><tr><th>Bank</th><th>Account</th><th>Amount</th></tr></thead>
-                    <tbody>
-                    {% for row in parsed_data.payment %}
-                    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
-                    {% endfor %}
-                    </tbody>
+                    <tr><th class="w-50">Gross Pay YTD</th><td>${{ "%.2f"|format(parsed_data.gross_pay_ytd|default(0)) }}</td></tr>
+                    <tr><th>Net Pay YTD</th><td>${{ "%.2f"|format(parsed_data.net_pay_ytd|default(0)) }}</td></tr>
+                    <tr><th>Hours YTD</th><td>{{ parsed_data.hours_worked_ytd or '0' }}</td></tr>
                 </table>
             </div>
         </div>
+        {% elif parsed_data %}
+        <div class="alert alert-warning">PDF parsed but no salary data found. The file may not be a valid NCR Voyix paystub.</div>
         {% endif %}
     </div>
 </div>
