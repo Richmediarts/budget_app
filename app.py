@@ -847,15 +847,14 @@ def api_dashboard_stats():
 def import_paycheck_pdf():
     if 'pdf_file' not in request.files:
         flash('No file uploaded', 'danger')
-        return redirect(url_for('paychecks', active_tab='import'))
+        return redirect(url_for('import_paystub'))
     file = request.files['pdf_file']
     if file.filename == '':
         flash('No file selected', 'danger')
-        return redirect(url_for('paychecks', active_tab='import'))
+        return redirect(url_for('import_paystub'))
     if file and file.filename.endswith('.pdf'):
         import os
         import uuid
-        import re
         upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
         os.makedirs(upload_dir, exist_ok=True)
         file_path = os.path.join(upload_dir, f'{uuid.uuid4()}_{file.filename}')
@@ -864,18 +863,23 @@ def import_paycheck_pdf():
         try:
             from pypdf import PdfReader
             text = PdfReader(file_path).pages[0].extract_text()
-        except:
-            flash('Error reading PDF', 'danger')
-            return redirect(url_for('paychecks', active_tab='import'))
+        except Exception as e:
+            flash(f'Error reading PDF: {str(e)}', 'danger')
+            return redirect(url_for('import_paystub'))
         
         os.remove(file_path)
         
         data = parse_paycheck_text(text)
         import json
-        return redirect(url_for('paychecks', active_tab='import', edit_paycheck=data))
+        return render_template('import_paystub.html', parsed_data=data)
     
     flash('Invalid file type', 'danger')
-    return redirect(url_for('paychecks', active_tab='import'))
+    return redirect(url_for('import_paystub'))
+
+
+@app.route('/import_paystub')
+def import_paystub_form():
+    return render_template('import_paystub.html')
 
 
 if __name__ == '__main__':
