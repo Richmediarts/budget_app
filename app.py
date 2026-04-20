@@ -855,19 +855,21 @@ def import_paycheck_pdf():
     if file and file.filename.endswith('.pdf'):
         import os
         import uuid
-        upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
-        os.makedirs(upload_dir, exist_ok=True)
-        file_path = os.path.join(upload_dir, f'{uuid.uuid4()}_{file.filename}')
-        file.save(file_path)
+        import tempfile
         
         try:
             from pypdf import PdfReader
-            text = PdfReader(file_path).pages[0].extract_text()
+            
+            file_content = file.read()
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                tmp.write(file_content)
+                tmp_path = tmp.name
+            
+            text = PdfReader(tmp_path).pages[0].extract_text()
+            os.unlink(tmp_path)
         except Exception as e:
             flash(f'Error reading PDF: {str(e)}', 'danger')
             return redirect(url_for('import_paystub'))
-        
-        os.remove(file_path)
         
         data = parse_paycheck_text(text)
         import json

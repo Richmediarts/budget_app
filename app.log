@@ -5,10 +5,30 @@
  * Running on http://127.0.0.1:8080
  * Running on http://10.0.0.30:8080
 [33mPress CTRL+C to quit[0m
-100.96.97.60 - - [20/Apr/2026 11:19:12] "GET /bills HTTP/1.1" 200 -
-100.96.97.60 - - [20/Apr/2026 11:19:12] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 11:19:13] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 11:19:43] "[32mGET /mark_bill_paid/10 HTTP/1.1[0m" 302 -
-100.96.97.60 - - [20/Apr/2026 11:19:43] "GET /bills HTTP/1.1" 200 -
-100.96.97.60 - - [20/Apr/2026 11:19:43] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 11:19:44] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+100.96.97.60 - - [20/Apr/2026 13:20:51] "GET /bills HTTP/1.1" 200 -
+100.96.97.60 - - [20/Apr/2026 13:20:52] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+100.96.97.60 - - [20/Apr/2026 13:20:52] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+100.96.97.60 - - [20/Apr/2026 13:20:56] "GET /import_paystub HTTP/1.1" 200 -
+100.96.97.60 - - [20/Apr/2026 13:20:56] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+100.96.97.60 - - [20/Apr/2026 13:20:56] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+[2026-04-20 13:21:07,876] ERROR in app: Exception on /import_paycheck_pdf [POST]
+Traceback (most recent call last):
+  File "/home/rich/DATA/budget_app/venv/lib/python3.12/site-packages/flask/app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rich/DATA/budget_app/venv/lib/python3.12/site-packages/flask/app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rich/DATA/budget_app/venv/lib/python3.12/site-packages/flask/app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rich/DATA/budget_app/venv/lib/python3.12/site-packages/flask/app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rich/DATA/budget_app/app.py", line 861, in import_paycheck_pdf
+    file.save(file_path)
+  File "/home/rich/DATA/budget_app/venv/lib/python3.12/site-packages/werkzeug/datastructures/file_storage.py", line 125, in save
+    dst = open(dst, "wb")
+          ^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/home/rich/DATA/budget_app/uploads/563bcc6c-4db2-4b86-9bdb-845277cbcf76_4-17-26-PayStub.pdf'
+100.96.97.60 - - [20/Apr/2026 13:21:07] "[35m[1mPOST /import_paycheck_pdf HTTP/1.1[0m" 500 -
