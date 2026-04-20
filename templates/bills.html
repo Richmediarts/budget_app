@@ -23,8 +23,8 @@
                             </thead>
                             <tbody>
                                 {% for bill in bills %}
-                                    {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d') %}
-                                    {% set today = datetime.now() %}
+                                    {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d').date() %}
+                                    {% set today = datetime.now().date() %}
                                     {% set days_until = (due_date - today).days %}
                                     <tr class="{% if bill.is_paid %}table-success{% elif days_until < 0 %}table-danger{% elif days_until <= 3 %}table-warning{% endif %}">
                                         <td>
@@ -55,7 +55,7 @@
                                             {% elif days_until < 0 %}
                                                 <span class="text-danger fw-bold">{{ -days_until }} days overdue</span>
                                             {% elif days_until == 0 %}
-                                                <span class="text-warning fw-bold">Today!</span>
+                                                <span class="text-success fw-bold">Today</span>
                                             {% elif days_until <= 7 %}
                                                 <span class="text-warning">{{ days_until }} days</span>
                                             {% else %}

@@ -623,8 +623,47 @@ def update_bill(id):
 
 @app.route('/mark_bill_paid/<int:id>')
 def mark_bill_paid(id):
-    db.mark_bill_paid(id)
-    flash('Bill marked as paid!', 'success')
+    conn = db.get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT is_recurring, recurrence_type, due_date, amount, payee_id, notes FROM bills WHERE id = ?', (id,))
+    bill = cursor.fetchone()
+    
+    if bill and bill[0]:
+        is_recurring, recurrence_type, old_due_date = bill[0], bill[1], bill[2]
+        
+        old_due = datetime.strptime(old_due_date, '%Y-%m-%d')
+        
+        if recurrence_type == 'weekly':
+            new_due = old_due + timedelta(weeks=1)
+        elif recurrence_type == 'biweekly':
+            new_due = old_due + timedelta(weeks=2)
+        elif recurrence_type == 'monthly':
+            new_due = old_due + timedelta(months=1)
+        elif recurrence_type == 'quarterly':
+            new_due = old_due + timedelta(months=3)
+        elif recurrence_type == 'semi-monthly':
+            if old_due.day < 15:
+                new_due = old_due.replace(day=15)
+            else:
+                if old_due.month == 12:
+                    new_due = old_due.replace(year=old_due.year+1, month=1, day=1)
+                else:
+                    new_due = old_due.replace(month=old_due.month+1, day=1)
+        else:
+            new_due = old_due + timedelta(months=1)
+        
+        new_due_str = new_due.strftime('%Y-%m-%d')
+        
+        cursor.execute('UPDATE bills SET due_date = ? WHERE id = ?', (new_due_str, id))
+        conn.commit()
+        
+        flash(f'Bill paid! Next due date: {new_due_str}', 'success')
+    else:
+        db.mark_bill_paid(id)
+        flash('Bill marked as paid!', 'success')
+    
+    conn.close()
     return redirect(url_for('bills'))
 
 @app.route('/mark_bill_unpaid/<int:id>')
