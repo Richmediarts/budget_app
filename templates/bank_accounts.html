@@ -6,7 +6,7 @@
 {% block content %}
 <div class="row g-3">
     <div class="col-12">
-        <div class="card bg-primary text-white mb-3">
+        <div class="card mb-3" style="background: var(--primary); color: #000; border: none;">
             <div class="card-body text-center">
                 <h5>Total Bank Balance</h5>
                 <h2 class="mb-0">${{ "%.2f"|format(total_balance) }}</h2>
@@ -26,7 +26,7 @@
                 {% if accounts %}
                     <div class="row g-3">
                         {% for account in accounts %}
-                            <div class="col-sm-6">
+                            <div class="col-12 col-sm-6">
                                 <div class="account-card h-100">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <div>
@@ -47,28 +47,29 @@
                                             </ul>
                                         </div>
                                     </div>
-                                    <div class="account-type-badge">
-                                        <span class="badge bg-{{ 'primary' if account.account_type == 'checking' else 'success' if account.account_type == 'savings' else 'info' }}">
-                                            {{ account.account_type }}
-                                        </span>
+<div class="account-type-badge">
+                                        <span class="badge" style="background: #00D9A5; color: #000;">{{ account.account_type|capitalize }}</span>
                                         {% if account.account_number_last4 %}
-                                            <span class="badge bg-secondary">****{{ account.account_number_last4 }}</span>
+                                            <span class="badge" style="background: #52525b; color: #fff;">****{{ account.account_number_last4 }}</span>
                                         {% endif %}
                                     </div>
                                     <hr>
                                     <div class="balance-display">
                                         <small class="text-muted">Current Balance</small>
-                                        <h3 class="mb-0 {% if account.current_balance < 0 %}text-danger{% endif %}">
+                                        <h3 class="mb-0" style="{% if account.current_balance < 0 %}color: #EF4444;{% endif %}">
                                             ${{ "%.2f"|format(account.current_balance) }}
                                         </h3>
                                     </div>
-                                    {% if account.website %}
-                                    <div class="mt-2">
+                                    <div class="mt-2 d-flex gap-3">
+                                        <a href="{{ url_for('transactions', account_id=account.id) }}" class="text-decoration-none">
+                                            <i class="bi bi-list-ol"></i> Transactions
+                                        </a>
+                                        {% if account.website %}
                                         <a href="{{ account.website }}" target="_blank" class="text-decoration-none">
                                             <i class="bi bi-box-arrow-up-right"></i> Login
                                         </a>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         {% endfor %}

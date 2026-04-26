@@ -37,7 +37,7 @@
         <div class="tab-content">
             <div class="tab-pane fade show active" id="edit-paycheck">
                 <div class="card">
-                    <div class="card-header bg-warning text-dark">
+                    <div class="card-header" style="background: var(--bg-card);">
                         <h5><i class="bi bi-pencil"></i> Edit Paycheck - {{ edit_paycheck.check_date or edit_paycheck.pay_date }}</h5>
                     </div>
                     <div class="card-body">
@@ -210,7 +210,7 @@
         <div class="card paystub-preview mb-4" id="paystub-container">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-file-earmark-text"></i> Imported Paystub Preview</h5>
-                <span class="badge bg-warning text-dark">Not Yet Saved</span>
+                <span class="badge" style="background: #F59E0B; color: #000;">Not Yet Saved</span>
             </div>
             <div class="card-body" id="paystub-content">
                 <div class="alert alert-info">
@@ -246,7 +246,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5><i class="bi bi-clock-history"></i> Paystub History</h5>
-                        <span class="badge bg-primary">{{ paychecks|length }} Paychecks</span>
+                        <span class="badge" style="background: var(--primary); color: #000;">{{ paychecks|length }} Paychecks</span>
                     </div>
                     <div class="card-body">
                         {% if paychecks %}
@@ -271,9 +271,9 @@
                                                 <td class="fw-bold">${{ "%.2f"|format(pc.gross_pay or 0) }}</td>
                                                 <td class="text-success fw-bold">${{ "%.2f"|format(pc.net_pay or 0) }}</td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary" onclick="showPaystub({{ pc.id }})">
+                                                    <a href="{{ url_for('view_paycheck', id=pc.id) }}" class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-eye"></i> View
-                                                    </button>
+                                                    </a>
                                                     <a href="{{ url_for('edit_paycheck', id=pc.id) }}" class="btn btn-sm btn-outline-warning">
                                                         <i class="bi bi-pencil"></i> Edit
                                                     </a>
@@ -308,7 +308,7 @@
                                 <input type="file" name="pdf_file" class="form-control" accept=".pdf">
                             </div>
                             <div class="text-center my-2">
-                                <span class="badge bg-secondary">OR</span>
+                                <span class="badge" style="background: #52525b; color: #fff;">OR</span>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label"><i class="bi bi-clipboard"></i> Paste Paystub Text</label>
@@ -321,7 +321,7 @@
                         
                         <hr class="my-4">
                         
-                        <div class="card bg-light">
+                        <div class="card" style="background: var(--bg-card);">
                             <div class="card-header">
                                 <h6><i class="bi bi-lightbulb"></i> Supported Formats</h6>
                             </div>
@@ -341,7 +341,7 @@
                 
                 {% if parsed_data %}
                 <div class="card mt-4 border-primary">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header" style="background: var(--primary); color: #000;">
                         <h5><i class="bi bi-check-circle"></i> Extracted Paycheck Data</h5>
                     </div>
                     <div class="card-body">
@@ -658,30 +658,26 @@ async function showPaystub(id) {
             return '$' + (val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         
-        const currentYear = new Date().getFullYear();
-        const ytdData = paychecks.reduce((acc, p) => {
-            if (p.check_date && p.check_date.startsWith(String(currentYear))) {
-                acc.hours += p.hours_worked || 0;
-                acc.gross += p.gross_pay || 0;
-                acc.pre_tax += p.pre_tax_deductions || 0;
-                acc.taxes += p.employee_taxes || 0;
-                acc.post_tax += p.post_tax_deductions || 0;
-                acc.net += p.net_pay || 0;
-                acc.salary += p.salary || 0;
-                acc.vacation_pay += p.vacation_pay || 0;
-                acc.holiday_pay += p.holiday_pay || 0;
-                acc.floating_holiday += p.floating_holiday || 0;
-                acc.biometric_credit += p.biometric_credit || 0;
-                acc.spousal_biometric += p.spousal_biometric || 0;
-                acc.group_term_life += p.group_term_life || 0;
-                acc.employer_match += p.employer_match || 0;
-                acc.oasdi += p.oasdi || 0;
-                acc.medicare += p.medicare || 0;
-                acc.federal_tax += p.federal_tax || 0;
-                acc.retirement_401k += p.retirement_401k || 0;
-            }
-            return acc;
-        }, { hours: 0, gross: 0, pre_tax: 0, taxes: 0, post_tax: 0, net: 0, salary: 0, vacation_pay: 0, holiday_pay: 0, floating_holiday: 0, biometric_credit: 0, spousal_biometric: 0, group_term_life: 0, employer_match: 0, oasdi: 0, medicare: 0, federal_tax: 0, retirement_401k: 0 });
+        const ytdData = {
+            hours: pc.hours_worked_ytd || 0,
+            gross: pc.gross_pay_ytd || 0,
+            pre_tax: pc.pre_tax_deductions_ytd || 0,
+            taxes: pc.employee_taxes_ytd || 0,
+            post_tax: pc.post_tax_deductions_ytd || 0,
+            net: pc.net_pay_ytd || 0,
+            salary: pc.salary_ytd || 0,
+            vacation_pay: pc.vacation_pay_ytd || 0,
+            holiday_pay: pc.holiday_pay_ytd || 0,
+            floating_holiday: pc.floating_holiday_ytd || 0,
+            biometric_credit: pc.biometric_credit_ytd || 0,
+            spousal_biometric: pc.spousal_biometric_ytd || 0,
+            group_term_life: pc.group_term_life_ytd || 0,
+            employer_match: pc.employer_match_ytd || 0,
+            oasdi: pc.oasdi_ytd || 0,
+            medicare: pc.medicare_ytd || 0,
+            federal_tax: pc.federal_tax_ytd || 0,
+            retirement_401k: pc.retirement_401k_ytd || 0,
+        };
         
         const vacationHours = 24;
         const vacationRate = pc.vacation_pay && vacationHours ? (pc.vacation_pay / vacationHours) : 0;

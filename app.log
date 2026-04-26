@@ -5,35 +5,8 @@
  * Running on http://127.0.0.1:8080
  * Running on http://10.0.0.30:8080
 [33mPress CTRL+C to quit[0m
-100.96.97.60 - - [20/Apr/2026 13:58:22] "POST /import_paycheck_pdf HTTP/1.1" 200 -
-100.96.97.60 - - [20/Apr/2026 13:58:26] "POST /import_paycheck_pdf HTTP/1.1" 200 -
-100.96.97.60 - - [20/Apr/2026 13:58:26] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 13:58:26] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 13:58:35] "[32mPOST /save_imported_paycheck HTTP/1.1[0m" 302 -
-100.96.97.60 - - [20/Apr/2026 13:58:36] "GET /paychecks HTTP/1.1" 200 -
-100.96.97.60 - - [20/Apr/2026 13:58:36] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 13:58:37] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-100.96.97.60 - - [20/Apr/2026 13:58:37] "GET /api/payslip/26 HTTP/1.1" 200 -
-100.124.143.59 - - [20/Apr/2026 14:37:06] "GET / HTTP/1.1" 200 -
-100.124.143.59 - - [20/Apr/2026 14:37:07] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.124.143.59 - - [20/Apr/2026 14:37:07] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-100.124.143.59 - - [20/Apr/2026 14:37:07] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-100.124.143.59 - - [20/Apr/2026 14:37:24] "GET /paychecks HTTP/1.1" 200 -
-100.124.143.59 - - [20/Apr/2026 14:37:24] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.124.143.59 - - [20/Apr/2026 14:37:24] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-100.124.143.59 - - [20/Apr/2026 14:37:24] "GET /api/payslip/26 HTTP/1.1" 200 -
-100.124.143.59 - - [20/Apr/2026 14:37:39] "GET /bills HTTP/1.1" 200 -
-100.124.143.59 - - [20/Apr/2026 14:37:40] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-100.124.143.59 - - [20/Apr/2026 14:37:40] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-100.124.143.59 - - [20/Apr/2026 14:46:18] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-10.0.0.172 - - [20/Apr/2026 15:49:14] "GET / HTTP/1.1" 200 -
-10.0.0.172 - - [20/Apr/2026 15:49:14] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-10.0.0.172 - - [20/Apr/2026 15:49:14] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-10.0.0.172 - - [20/Apr/2026 15:49:24] "[31m[1mGET /import_paycheck HTTP/1.1[0m" 405 -
-10.0.0.172 - - [20/Apr/2026 15:49:33] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-10.0.0.172 - - [20/Apr/2026 15:49:35] "GET /import_paystub HTTP/1.1" 200 -
-10.0.0.172 - - [20/Apr/2026 15:49:35] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
-10.0.0.172 - - [20/Apr/2026 15:49:35] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-10.0.0.172 - - [20/Apr/2026 15:49:48] "POST /import_paycheck_pdf HTTP/1.1" 200 -
-10.0.0.172 - - [20/Apr/2026 15:49:49] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
-10.0.0.172 - - [20/Apr/2026 15:49:49] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+100.105.121.19 - - [26/Apr/2026 10:11:42] "GET / HTTP/1.1" 200 -
+100.105.121.19 - - [26/Apr/2026 10:11:42] "GET /static/css/style.css HTTP/1.1" 200 -
+100.105.121.19 - - [26/Apr/2026 10:11:43] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+100.105.121.19 - - [26/Apr/2026 10:35:31] "[33mGET /global/health HTTP/1.1[0m" 404 -
+100.105.121.19 - - [26/Apr/2026 10:35:33] "[33mGET /global/health HTTP/1.1[0m" 404 -

@@ -1,27 +1,31 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Budget Tracker{% endblock %}
+{% block title %}Dashboard - J Johnsons{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="row g-3">
     <div class="col-sm-6 col-lg-4">
-        <div class="stat-card bank-balance h-100">
-            <div class="stat-icon"><i class="bi bi-bank"></i></div>
-            <div class="stat-info">
-                <h3>Total Bank Balance</h3>
-                <h2 class="amount">${{ "%.2f"|format(stats.total_bank) }}</h2>
+        <a href="{{ url_for('bank_accounts') }}" class="text-decoration-none">
+            <div class="stat-card bank-balance h-100">
+                <div class="stat-icon"><i class="bi bi-bank"></i></div>
+                <div class="stat-info">
+                    <h3>Total Bank Balance</h3>
+                    <h2 class="amount">${{ "%.2f"|format(stats.total_bank) }}</h2>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-lg-4">
-        <div class="stat-card credit-debt h-100">
-            <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
-            <div class="stat-info">
-                <h3>Credit Card Debt</h3>
-                <h2 class="amount">${{ "%.2f"|format(stats.total_credit) }}</h2>
+        <a href="{{ url_for('credit_cards') }}" class="text-decoration-none">
+            <div class="stat-card credit-debt h-100">
+                <div class="stat-icon"><i class="bi bi-credit-card"></i></div>
+                <div class="stat-info">
+                    <h3>Credit Card Debt</h3>
+                    <h2 class="amount">${{ "%.2f"|format(stats.total_credit) }}</h2>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-12 col-lg-4">
         <div class="stat-card net-worth h-100">
@@ -36,11 +40,13 @@
     </div>
 </div>
 
-<div class="row g-3 mt-3">
+<div class="row g-3 mt-2">
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header">
-                <h5><i class="bi bi-receipt"></i> Upcoming Bills</h5>
+                <a href="{{ url_for('bills') }}" class="text-decoration-none text-white">
+                    <h5><i class="bi bi-receipt"></i> Upcoming Bills</h5>
+                </a>
             </div>
             <div class="card-body">
                 {% if stats.upcoming_bills %}
@@ -49,7 +55,7 @@
                             {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d') %}
                             {% set today = datetime.now() %}
                             {% set days_until = (due_date - today).days %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <a href="{{ url_for('bills') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap gap-2 text-decoration-none">
                                 <div>
                                     <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
                                     <br><small class="text-muted">{{ bill.due_date }}</small>
@@ -57,22 +63,22 @@
                                 <div class="text-end">
                                     <span class="amount">${{ "%.2f"|format(bill.amount) }}</span>
                                     {% if days_until < 0 %}
-                                        <span class="badge bg-danger">Overdue {{ -days_until }}d</span>
+                                        <span class="badge" style="background: #EF4444; color: #fff;">Overdue {{ -days_until }}d</span>
                                     {% elif days_until == 0 %}
-                                        <span class="badge bg-warning">Due Today</span>
+                                        <span class="badge" style="background: #F59E0B; color: #000;">Due Today</span>
                                     {% elif days_until <= 7 %}
-                                        <span class="badge bg-warning">{{ days_until }} days</span>
+                                        <span class="badge" style="background: #F59E0B; color: #000;">{{ days_until }} days</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ days_until }} days</span>
+                                        <span class="badge" style="background: #52525b; color: #fff;">{{ days_until }} days</span>
                                     {% endif %}
                                 </div>
-                            </div>
+                            </a>
                         {% endfor %}
                     </div>
                 {% else %}
                     <p class="text-muted">No upcoming bills.</p>
                 {% endif %}
-                <a href="{{ url_for('bills') }}" class="btn btn-sm btn-primary mt-3">View All Bills</a>
+                <a href="{{ url_for('bills') }}" class="btn btn-primary mt-3 w-100">View All Bills</a>
             </div>
         </div>
     </div>
@@ -85,19 +91,19 @@
             <div class="card-body">
                 {% if stats.last_paycheck %}
                     <div class="paycheck-summary">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Pay Date:</span>
+                        <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                            <span class="text-muted">Pay Date:</span>
                             <strong>{{ stats.last_paycheck.pay_date }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Gross Pay:</span>
+                            <span class="text-muted">Gross Pay:</span>
                             <span>${{ "%.2f"|format(stats.last_paycheck.gross_pay) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Total Deductions:</span>
+                            <span class="text-muted">Total Deductions:</span>
                             <span class="text-danger">-${{ "%.2f"|format(stats.last_paycheck.gross_pay - stats.last_paycheck.net_pay) }}</span>
                         </div>
-                        <hr>
+                        <hr class="my-3" style="opacity: 0.2;">
                         <div class="d-flex justify-content-between">
                             <strong>Net Pay:</strong>
                             <strong class="text-success fs-5">${{ "%.2f"|format(stats.last_paycheck.net_pay) }}</strong>
@@ -106,7 +112,7 @@
                 {% else %}
                     <p class="text-muted">No paychecks recorded yet.</p>
                 {% endif %}
-                <a href="{{ url_for('paychecks') }}" class="btn btn-sm btn-primary mt-3">View Paychecks</a>
+                <a href="{{ url_for('paychecks') }}" class="btn btn-primary mt-3 w-100">View Paychecks</a>
             </div>
         </div>
         
@@ -116,7 +122,7 @@
             </div>
             <div class="card-body">
                 {% if next_paycheck_date %}
-                    <p class="mb-1">Estimated next biweekly paycheck:</p>
+                    <p class="mb-1 text-muted">Estimated next biweekly paycheck:</p>
                     <h4 class="text-success">{{ next_paycheck_date }}</h4>
                 {% else %}
                     <p class="text-muted">Add a paycheck to see the schedule.</p>
@@ -140,17 +146,17 @@
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{{ url_for('add_bill_form') }}" class="btn btn-outline-success w-100">
+                        <a href="{{ url_for('add_bill_form') }}" class="btn btn-outline-primary w-100">
                             <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Bill</span>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-outline-info w-100">
+                        <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-outline-primary w-100">
                             <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Account</span>
                         </a>
                     </div>
                     <div class="col-6 col-md-3">
-                        <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-outline-warning w-100">
+                        <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-outline-primary w-100">
                             <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Card</span>
                         </a>
                     </div>

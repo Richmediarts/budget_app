@@ -6,7 +6,7 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <div class="card bg-danger text-white mb-3">
+        <div class="card mb-3" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid var(--glass-border);">
             <div class="card-body text-center">
                 <h5>Total Credit Card Debt</h5>
                 <h2 class="mb-0">${{ "%.2f"|format(total_debt) }}</h2>
@@ -18,9 +18,12 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-credit-card"></i> Your Credit Cards</h5>
-                <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Credit Card
-                </a>
+                <div class="d-flex gap-2">
+                    <input type="text" id="searchCards" class="form-control" placeholder="Search..." style="width: 200px;">
+                    <a href="{{ url_for('add_credit_card_form') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Credit Card
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 {% if cards %}
@@ -75,8 +78,7 @@
                                         {% endif %}
                                     </div>
                                     <div class="utilization-bar">
-                                        <div class="utilization-fill {% if utilization > 80 %}bg-danger{% elif utilization > 50 %}bg-warning{% else %}bg-success{% endif %}" 
-                                             style="width: {{ [utilization, 100]|min }}%"></div>
+                                        <div class="utilization-fill" style="width: {{ [utilization, 100]|min }}%;{% if utilization > 80 %} background: #EF4444;{% elif utilization > 50 %} background: #F59E0B;{% else %} background: #00D9A5;{% endif %}"></div>
                                     </div>
                                 </div>
                             </div>
@@ -126,6 +128,14 @@
 
 <script>
 const cards = {{ cards|tojson }};
+
+document.getElementById('searchCards')?.addEventListener('input', function(e) {
+    const search = e.target.value.toLowerCase();
+    document.querySelectorAll('.credit-card-display').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(search) ? '' : 'none';
+    });
+});
 
 function editCard(id) {
     const card = cards.find(c => c.id === id);

@@ -143,9 +143,17 @@
     </div>
     <div class="doc-label">
       <div class="tag">Pay Statement</div>
-      <div class="period">{{ (pc.check_date or pc.pay_date)|default('—') }}</div>
-    </div>
-  </div>
+<div class="period">{{ (pc.check_date or pc.pay_date)|default('') }}</div>
+      </div>
+      
+      <div class="identity-bar">
+        <div class="id-cell"><label>Employee Name</label><div class="val">{{ pc.employee_name|default('') }}</div></div>
+        <div class="id-cell"><label>Company</label><div class="val">{{ pc.company|default('NCR Voyix Corp.') }}</div></div>
+        <div class="id-cell"><label>Employee ID</label><div class="val">{{ pc.employee_id|default('') }}</div></div>
+        <div class="id-cell"><label>Period Begin</label><div class="val">{{ pc.pay_period_begin|default('') }}</div></div>
+        <div class="id-cell"><label>Period End</label><div class="val">{{ pc.pay_period_end|default('') }}</div></div>
+        <div class="id-cell"><label>Check Date</label><div class="val">{{ pc.check_date|default('') }}</div></div>
+      </div>
 
   <!-- IDENTITY BAR -->
   <div class="identity-bar">
@@ -243,7 +251,7 @@
             <td>{{ ((pc.hours_worked|default(0) * 0.7)|int) if pc.hours_worked else '56' }}</td>
             <td>—</td>
             <td>${{ "%.2f"|format(pc.salary|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.salary_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
           {% if pc.vacation_pay|default(0) > 0 %}
@@ -253,37 +261,37 @@
             <td>24</td>
             <td>$57.38</td>
             <td>${{ "%.2f"|format(pc.vacation_pay|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.vacation_pay_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
           {% if pc.biometric_credit|default(0) > 0 %}
           <tr>
             <td>Biometric Credit</td>
-            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('') }}<span class="dash">–</span>{{ pc.pay_period_end|default('') }}</td>
             <td>—</td>
             <td>—</td>
             <td>${{ "%.2f"|format(pc.biometric_credit|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.biometric_credit_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
           {% if pc.spousal_biometric|default(0) > 0 %}
           <tr>
             <td>Spousal Biometric Credit</td>
-            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('') }}<span class="dash">–</span>{{ pc.pay_period_end|default('') }}</td>
             <td>—</td>
             <td>—</td>
             <td>${{ "%.2f"|format(pc.spousal_biometric|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.spousal_biometric_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
           {% if pc.group_term_life|default(0) > 0 %}
           <tr>
             <td>Group Term Life</td>
-            <td class="date-small">{{ pc.pay_period_begin|default('—') }}<span class="dash">–</span>{{ pc.pay_period_end|default('—') }}</td>
+            <td class="date-small">{{ pc.pay_period_begin|default('') }}<span class="dash">–</span>{{ pc.pay_period_end|default('') }}</td>
             <td>—</td>
             <td>—</td>
             <td>${{ "%.2f"|format(pc.group_term_life|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.group_term_life_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
           {% if pc.floating_holiday|default(0) > 0 %}
@@ -293,7 +301,7 @@
             <td>—</td>
             <td>—</td>
             <td>${{ "%.2f"|format(pc.floating_holiday|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.floating_holiday_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
           {% if pc.holiday_pay|default(0) > 0 %}
@@ -303,7 +311,7 @@
             <td>—</td>
             <td>—</td>
             <td>${{ "%.2f"|format(pc.holiday_pay|default(0)) }}</td>
-            <td class="ytd-val">—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.holiday_pay_ytd|default(0)) }}</td>
           </tr>
           {% endif %}
         </tbody>
@@ -314,7 +322,7 @@
             <td></td>
             <td></td>
             <td>${{ "%.2f"|format(pc.gross_pay|default(0)) }}</td>
-            <td>—</td>
+            <td class="ytd-val">${{ "%.2f"|format(pc.gross_pay_ytd|default(0)) }}</td>
           </tr>
         </tfoot>
       </table>

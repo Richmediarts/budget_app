@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - J Johnsons{% endblock %}
+{% block page_title %}Categories{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-tags"></i> Payee Categories</h5>
+                <button class="btn btn-primary" onclick="showAddPayeeCategory()">
+                    <i class="bi bi-plus-circle"></i> Add Category
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 d-flex">
+                    <input type="text" id="searchPayeeCategories" class="form-control" placeholder="Search categories...">
+                    <button type="button" id="searchPayeeCategoriesBtn" class="btn btn-primary ms-2">Search</button>
+                </div>
+                {% if payee_categories %}
+                    <div class="table-responsive">
+                        <table class="table" id="payeeCategoriesTable">
+                            <thead>
+                                <tr>
+                                    <th>Category Name</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in payee_categories %}
+                                    <tr>
+                                        <td>{{ cat }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deletePayeeCategory('{{ cat }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No payee categories yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-pie-chart"></i> Budget Categories</h5>
+                <a href="{{ url_for('add_budget_category_form') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Budget Category
+                </a>
+            </div>
+            <div class="card-body">
+                {% if budget_categories %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th class="text-end">Monthly Limit</th>
+                                    <th class="text-end">Color</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in budget_categories %}
+                                    <tr>
+                                        <td>
+                                            <span class="color-dot" style="background-color: {{ cat.color }};"></span>
+                                            {{ cat.name }}
+                                        </td>
+                                        <td class="text-end">${{ "%.2f"|format(cat.monthly_limit) }}</td>
+                                        <td class="text-end">
+                                            <span style="display: inline-block; width: 24px; height: 24px; border-radius: 4px; background: {{ cat.color }};"></span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editBudgetCategory({{ cat.id }})">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <a href="{{ url_for('delete_budget_category', id=cat.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this category?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No budget categories yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const budget_categories = {{ budget_categories|tojson }};
+
+document.getElementById('searchPayeeCategories')?.addEventListener('input', function(e) {
+    const search = e.target.value.toLowerCase();
+    document.querySelectorAll('#payeeCategoriesTable tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+});
+
+document.getElementById('searchPayeeCategoriesBtn')?.addEventListener('click', function() {
+    const search = document.getElementById('searchPayeeCategories').value.toLowerCase();
+    document.querySelectorAll('#payeeCategoriesTable tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+});
+
+function showAddPayeeCategory() {
+    const modal = `
+        <div class="modal fade" id="addPayeeCategoryModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Payee Category</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="/add_payee_category" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Category Name</label>
+                                <input type="text" name="category" class="form-control" required placeholder="e.g., Utilities, Insurance">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Category</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('addPayeeCategoryModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    const modalInstance = new bootstrap.Modal(document.getElementById('addPayeeCategoryModal'));
+    modalInstance.show();
+}
+
+function deletePayeeCategory(cat) {
+    if (confirm('Delete category "' + cat + '"? This will not delete the payees, just remove the category.')) {
+        fetch('/delete_payee_category', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'category=' + encodeURIComponent(cat)
+        }).then(() => window.location.reload());
+    }
+}
+
+function editBudgetCategory(id) {
+    const category = budget_categories.find(c => c.id === id);
+    if (!category) return;
+    
+    const modal = `
+        <div class="modal fade" id="editBudgetCategoryModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Budget Category</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="/update_budget_category/${category.id}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Category Name</label>
+                                <input type="text" name="name" class="form-control" required value="${category.name}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Monthly Limit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="monthly_limit" class="form-control" required value="${category.monthly_limit}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Color</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="color" name="color" class="form-control form-control-color" value="${category.color}" style="width: 50px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('editBudgetCategoryModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    const modalInstance = new bootstrap.Modal(document.getElementById('editBudgetCategoryModal'));
+    modalInstance.show();
+}
+</script>
+{% endblock %}

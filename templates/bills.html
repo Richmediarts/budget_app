@@ -8,9 +8,13 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
+                <div class="mb-3 d-flex">
+                    <input type="text" id="searchBills" class="form-control" placeholder="Search bills...">
+                    <button type="button" id="searchBtn" class="btn btn-primary ms-2">Search</button>
+                </div>
                 {% if bills %}
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover" id="billsTable">
                             <thead>
                                 <tr>
                                     <th>Payee</th>
@@ -49,35 +53,35 @@
                                                 <span class="badge bg-secondary">Pending</span>
                                             {% endif %}
                                         </td>
-                                        <td>
-                                            {% if bill.is_paid %}
-                                                -
-                                            {% elif days_until < 0 %}
-                                                <span class="text-danger fw-bold">{{ -days_until }} days overdue</span>
-                                            {% elif days_until == 0 %}
-                                                <span class="text-success fw-bold">Today</span>
-                                            {% elif days_until <= 7 %}
-                                                <span class="text-warning">{{ days_until }} days</span>
-                                            {% else %}
-                                                {{ days_until }} days
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if not bill.is_paid %}
-                                                <a href="{{ url_for('mark_bill_paid', id=bill.id) }}" class="btn btn-sm btn-success">
-                                                    <i class="bi bi-check-circle"></i> Pay
+<td>
+                                                {% if bill.is_paid %}
+                                                    <span class="badge" style="background: var(--primary); color: #000;">Paid</span>
+                                                {% elif days_until < 0 %}
+                                                    <span class="badge" style="background: #EF4444; color: #fff;">Overdue</span>
+                                                {% elif days_until == 0 %}
+                                                    <span class="badge" style="background: #F59E0B; color: #000;">Due Today</span>
+                                                {% else %}
+                                                    <span class="badge" style="background: #52525b; color: #fff;">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                        <td class="text-end">
+                                            <div class="btn-group btn-group-sm">
+                                                {% if not bill.is_paid %}
+                                                    <a href="{{ url_for('mark_bill_paid', id=bill.id) }}" class="btn btn-success">
+                                                        <i class="bi bi-check-circle"></i>
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{{ url_for('mark_bill_unpaid', id=bill.id) }}" class="btn btn-secondary">
+                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                    </a>
+                                                {% endif %}
+                                                <button class="btn btn-primary" onclick="editBill({{ bill.id }})">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <a href="{{ url_for('delete_bill', id=bill.id) }}" class="btn btn-danger" onclick="return confirm('Delete this bill?')">
+                                                    <i class="bi bi-trash"></i>
                                                 </a>
-                                            {% else %}
-                                                <a href="{{ url_for('mark_bill_unpaid', id=bill.id) }}" class="btn btn-sm btn-outline-secondary">
-                                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                                </a>
-                                            {% endif %}
-                                            <button class="btn btn-sm btn-outline-primary" onclick="editBill({{ bill.id }})">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <a href="{{ url_for('delete_bill', id=bill.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this bill?')">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -149,20 +153,32 @@
 <script>
 const bills = {{ bills|tojson }};
 const payees = {{ payees|tojson }};
+const categories = {{ categories|default([])|tojson }};
 
-const isRecurringEl = document.getElementById('is_recurring');
-if (isRecurringEl) {
-    isRecurringEl.addEventListener('change', function() {
-        document.getElementById('recurrence_type_container').style.display = this.checked ? 'block' : 'none';
+document.getElementById('searchBills')?.addEventListener('input', function(e) {
+    const search = e.target.value.toLowerCase();
+    document.querySelectorAll('#billsTable tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
     });
-}
+});
+
+document.getElementById('searchBtn')?.addEventListener('click', function() {
+    const search = document.getElementById('searchBills').value.toLowerCase();
+    document.querySelectorAll('#billsTable tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+});
 
 function editBill(id) {
     const bill = bills.find(b => b.id === id);
-    if (!bill) return;
+    if (!bill) {
+        alert('Bill not found');
+        return;
+    }
     
     const payee = payees.find(p => p.id === bill.payee_id);
-    const newPayee = payees.find(p => p.id === bill.payee_id);
     
     const modal = `
         <div class="modal fade" id="editBillModal" tabindex="-1">
@@ -179,6 +195,13 @@ function editBill(id) {
                                 <select name="payee_id" class="form-select">
                                     <option value="">-- Select Payee --</option>
                                     ${payees.map(p => `<option value="${p.id}" ${p.id === bill.payee_id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Budget Category</label>
+                                <select name="category_id" class="form-select">
+                                    <option value="">-- Select Category --</option>
+                                    ${categories.map(c => `<option value="${c.id}" ${c.id === bill.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -205,6 +228,16 @@ function editBill(id) {
                                     <option value="biweekly" ${bill.recurrence_type === 'biweekly' ? 'selected' : ''}>Biweekly</option>
                                     <option value="monthly" ${bill.recurrence_type === 'monthly' ? 'selected' : ''}>Monthly</option>
                                     <option value="yearly" ${bill.recurrence_type === 'yearly' ? 'selected' : ''}>Yearly</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Account</label>
+                                <select name="account" class="form-select">
+                                    <option value="">-- Select Account --</option>
+                                    <option value="Joint" ${bill.account === 'Joint' ? 'selected' : ''}>Joint</option>
+                                    <option value="My Personal" ${bill.account === 'My Personal' ? 'selected' : ''}>My Personal</option>
+                                    <option value="Ella's Personal" ${bill.account === "Ella's Personal" ? 'selected' : ''}>Ella's Personal</option>
+                                    <option value="Auto draft" ${bill.account === 'Auto draft' ? 'selected' : ''}>Auto draft</option>
                                 </select>
                             </div>
                             <div class="mb-3">

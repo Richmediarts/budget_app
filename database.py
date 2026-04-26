@@ -43,6 +43,17 @@ def init_db():
             is_active INTEGER DEFAULT 1
         );
         
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER,
+            date TEXT NOT NULL,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL,
+            balance REAL DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (account_id) REFERENCES bank_accounts(id)
+        );
+        
         CREATE TABLE IF NOT EXISTS paychecks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pay_date TEXT,
@@ -196,7 +207,9 @@ def add_payee(name, category, account_number, notes):
     cursor.execute('INSERT INTO payees (name, category, account_number, notes) VALUES (?, ?, ?, ?)',
                    (name, category, account_number, notes))
     conn.commit()
+    payee_id = cursor.lastrowid
     conn.close()
+    return payee_id
 
 def update_payee(id, name, category, account_number, notes, website=''):
     conn = get_db()
@@ -213,6 +226,16 @@ def delete_payee(id):
     conn.commit()
     conn.close()
 
+def add_payee_category_name(category_name):
+    pass
+
+def delete_payee_category_by_name(category_name):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE payees SET category = "" WHERE category = ?', (category_name,))
+    conn.commit()
+    conn.close()
+
 def get_all_bank_accounts():
     conn = get_db()
     cursor = conn.cursor()
@@ -220,6 +243,14 @@ def get_all_bank_accounts():
     accounts = cursor.fetchall()
     conn.close()
     return [dict(row) for row in accounts]
+
+def get_bank_account(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM bank_accounts WHERE id = ?', (id,))
+    account = cursor.fetchone()
+    conn.close()
+    return dict(account) if account else None
 
 def add_bank_account(name, account_type, institution, account_number_last4, current_balance, website=''):
     conn = get_db()
@@ -359,7 +390,16 @@ def add_paycheck(**kwargs):
         'spousal_life', 'employer_match', 'federal_filing_status', 'federal_allowances',
         'dependent_amount', 'additional_withholding', 'state_filing_status',
         'bank_name', 'account_number', 'deposit_amount', 'bank2_name', 'account2_number',
-        'deposit2_amount', 'notes'
+        'deposit2_amount', 'notes',
+        'employer_hsa', 'gross_pay_ytd', 'pre_tax_deductions_ytd', 'employee_taxes_ytd',
+        'post_tax_deductions_ytd', 'net_pay_ytd', 'hours_worked_ytd',
+        'retirement_401k_ytd', 'health_insurance_ytd', 'dental_plan_ytd', 'eye_plan_ytd',
+        'health_care_fsa_ytd', 'optional_life_ytd', 'add_insurance_ytd',
+        'federal_tax_ytd', 'state_tax_ytd', 'oasdi_ytd', 'medicare_ytd',
+        'loan_repayment_ytd', 'dependent_life_ytd', 'stock_purchase_ytd', 'spousal_life_ytd',
+        'employer_match_ytd',
+        'salary_ytd', 'vacation_pay_ytd', 'biometric_credit_ytd', 'spousal_biometric_ytd',
+        'group_term_life_ytd', 'floating_holiday_ytd', 'holiday_pay_ytd', 'hsa_ytd'
     ]
     
     placeholders = ', '.join(['?' for _ in fields])
@@ -405,19 +445,19 @@ def get_unpaid_bills():
     conn.close()
     return [dict(row) for row in bills]
 
-def add_bill(payee_id, amount, due_date, is_recurring, recurrence_type, notes):
+def add_bill(payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id=None, account=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO bills (payee_id, amount, due_date, is_recurring, recurrence_type, notes) VALUES (?, ?, ?, ?, ?, ?)',
-                   (payee_id, amount, due_date, is_recurring, recurrence_type, notes))
+    cursor.execute('INSERT INTO bills (payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                   (payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id, account))
     conn.commit()
     conn.close()
 
-def update_bill(id, payee_id, amount, due_date, is_recurring, recurrence_type, notes):
+def update_bill(id, payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id=None, account=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE bills SET payee_id=?, amount=?, due_date=?, is_recurring=?, recurrence_type=?, notes=? WHERE id=?',
-                   (payee_id, amount, due_date, is_recurring, recurrence_type, notes, id))
+    cursor.execute('UPDATE bills SET payee_id=?, amount=?, due_date=?, is_recurring=?, recurrence_type=?, notes=?, category_id=?, account=? WHERE id=?',
+                   (payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id, account, id))
     conn.commit()
     conn.close()
 
@@ -450,19 +490,63 @@ def get_budget_categories():
     conn.close()
     return [dict(row) for row in categories]
 
-def add_budget_category(name, monthly_limit, color):
+def get_category_spending_this_month(category_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO budget_categories (name, monthly_limit, color) VALUES (?, ?, ?)',
-                   (name, monthly_limit, color))
+    now = datetime.now()
+    month_start = now.strftime('%Y-%m-01')
+    cursor.execute('''
+        SELECT COALESCE(SUM(amount), 0) as total 
+        FROM bills 
+        WHERE category_id = ? 
+        AND is_paid = 1 
+        AND paid_date >= ?
+    ''', (category_id, month_start))
+    result = cursor.fetchone()
+    conn.close()
+    return result['total'] if result else 0
+
+def get_category_projected_this_month(category_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.now()
+    current_month = now.strftime('%Y-%m')
+    cursor.execute('''
+        SELECT COALESCE(SUM(
+            CASE 
+                WHEN recurrence_type = 'weekly' THEN amount * 4
+                WHEN recurrence_type = 'biweekly' THEN amount * 2
+                WHEN recurrence_type = 'monthly' THEN amount
+                WHEN recurrence_type = 'yearly' THEN amount / 12
+                ELSE amount
+            END
+        ), 0) as projected
+        FROM bills 
+        WHERE category_id = ?
+        AND is_recurring = 1
+        AND due_date LIKE ?
+    ''', (category_id, f'{current_month}%'))
+    result = cursor.fetchone()
+    conn.close()
+    return result['projected'] if result else 0
+
+def add_budget_category(name, monthly_limit, color, due_date='', notes='', actual_spent=0):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO budget_categories (name, monthly_limit, color, due_date, notes, actual_spent) VALUES (?, ?, ?, ?, ?, ?)',
+                   (name, monthly_limit, color, due_date, notes, actual_spent))
     conn.commit()
     conn.close()
 
-def update_budget_category(id, name, monthly_limit, color):
+def update_budget_category(id, name, monthly_limit, color, due_date='', notes='', actual_spent=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=? WHERE id=?',
-                   (name, monthly_limit, color, id))
+    if actual_spent is not None:
+        cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=?, due_date=?, notes=?, actual_spent=? WHERE id=?',
+                       (name, monthly_limit, color, due_date, notes, actual_spent, id))
+    else:
+        cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=?, due_date=?, notes=? WHERE id=?',
+                       (name, monthly_limit, color, due_date, notes, id))
     conn.commit()
     conn.close()
 
@@ -519,3 +603,75 @@ def get_next_paycheck_date():
     while next_date < datetime.now():
         next_date += timedelta(days=14)
     return next_date.strftime('%Y-%m-%d')
+
+def add_transaction(account_id, transaction_date, description, amount, running_balance):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO transactions (account_id, transaction_date, description, amount, running_balance) VALUES (?, ?, ?, ?, ?)',
+                   (account_id, transaction_date, description, amount, running_balance))
+    conn.commit()
+    transaction_id = cursor.lastrowid
+    conn.close()
+    return transaction_id
+
+def add_transactions(account_id, transactions_list):
+    conn = get_db()
+    cursor = conn.cursor()
+    for tx in transactions_list:
+        cursor.execute('INSERT INTO transactions (account_id, transaction_date, description, amount, running_balance) VALUES (?, ?, ?, ?, ?)',
+                       (account_id, tx['date'], tx['description'], tx['amount'], tx['balance']))
+    conn.commit()
+    conn.close()
+
+def get_transactions(account_id=None, start_date=None, end_date=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    query = 'SELECT * FROM transactions WHERE 1=1'
+    params = []
+    if account_id:
+        query += ' AND account_id = ?'
+        params.append(account_id)
+    if start_date:
+        query += ' AND transaction_date >= ?'
+        params.append(start_date)
+    if end_date:
+        query += ' AND transaction_date <= ?'
+        params.append(end_date)
+    query += ' ORDER BY transaction_date DESC, id DESC'
+    cursor.execute(query, params)
+    transactions = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in transactions]
+
+def clear_transactions(account_id=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if account_id:
+        cursor.execute('DELETE FROM transactions WHERE account_id = ?', (account_id,))
+    else:
+        cursor.execute('DELETE FROM transactions')
+    conn.commit()
+    conn.close()
+
+def get_transaction(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM transactions WHERE id = ?', (id,))
+    tx = cursor.fetchone()
+    conn.close()
+    return dict(tx) if tx else None
+
+def update_transaction(id, transaction_date, description, amount, running_balance):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''UPDATE transactions SET transaction_date=?, description=?, amount=?, running_balance=? WHERE id=?''',
+                   (transaction_date, description, amount, running_balance, id))
+    conn.commit()
+    conn.close()
+
+def delete_transaction(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM transactions WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()

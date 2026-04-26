@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, timedelta
+import csv
+import io
 import database as db
 
 app = Flask(__name__)
@@ -225,13 +227,15 @@ def parse_paycheck_text(raw_text):
         words = line.split()
         
         if 'richard' in line_lower or 'johnson' in line_lower:
+            name_words = []
             for word in words:
                 if word[0].isupper() and len(word) > 2 and not any(c.isdigit() for c in word):
                     if 'voyix' not in word.lower() and 'corporation' not in word.lower() and word not in ['Name', 'Company', 'Employee', 'Description', 'Amount', 'Current', 'YTD', 'Hours', 'Gross', 'Tax', 'Net']:
-                        result['employee_name'] = line.strip()
-                        break
-            if 'employee_name' in result:
-                break
+                        name_words.append(word)
+                        if len(name_words) >= 2:
+                            break
+            if name_words:
+                result['employee_name'] = ' '.join(name_words)
     
     summary_line = None
     for line in lines:
@@ -525,7 +529,15 @@ def import_paycheck():
 
 @app.route('/save_imported_paycheck', methods=['POST'])
 def save_imported_paycheck():
+    import json
+    
     data = request.form.to_dict()
+    if 'parsed_json' in data:
+        try:
+            parsed = json.loads(data['parsed_json'])
+            data.update(parsed)
+        except:
+            pass
     
     numeric_fields = ['hours_worked', 'gross_pay', 'net_pay', 'pre_tax_deductions', 'employee_taxes', 
                      'post_tax_deductions', 'salary', 'biometric_credit', 'floating_holiday', 
@@ -547,7 +559,7 @@ def save_imported_paycheck():
     
     kwargs = {}
     for field in numeric_fields:
-        val = data.get(field, '0').replace(',', '')
+        val = str(data.get(field, '0')).replace(',', '')
         kwargs[field] = float(val) if val else 0
     
     kwargs['pay_date'] = data.get('check_date', '')
@@ -587,12 +599,14 @@ def bills():
         bills = all_bills
     
     payees = db.get_all_payees()
-    return render_template('bills.html', bills=bills, payees=payees, filter_type=filter_type)
+    categories = db.get_budget_categories()
+    return render_template('bills.html', bills=bills, payees=payees, categories=categories, filter_type=filter_type)
 
 @app.route('/add_bill')
 def add_bill_form():
     payees = db.get_all_payees()
-    return render_template('add_bill.html', payees=payees)
+    categories = db.get_budget_categories()
+    return render_template('add_bill.html', payees=payees, categories=categories)
 
 @app.route('/add_bill', methods=['POST'])
 def add_bill():
@@ -602,7 +616,9 @@ def add_bill():
         request.form['due_date'],
         1 if request.form.get('is_recurring') else 0,
         request.form.get('recurrence_type'),
-        request.form.get('notes', '')
+        request.form.get('notes', ''),
+        request.form.get('category_id') or None,
+        request.form.get('account') or None
     )
     flash('Bill added successfully!', 'success')
     return redirect(url_for('bills'))
@@ -616,7 +632,9 @@ def update_bill(id):
         request.form['due_date'],
         1 if request.form.get('is_recurring') else 0,
         request.form.get('recurrence_type'),
-        request.form.get('notes', '')
+        request.form.get('notes', ''),
+        request.form.get('category_id') or None,
+        request.form.get('account') or None
     )
     flash('Bill updated successfully!', 'success')
     return redirect(url_for('bills'))
@@ -626,45 +644,50 @@ def mark_bill_paid(id):
     conn = db.get_db()
     cursor = conn.cursor()
     
-    cursor.execute('SELECT is_recurring, recurrence_type, due_date, amount, payee_id, notes FROM bills WHERE id = ?', (id,))
+    cursor.execute('SELECT is_recurring, recurrence_type, due_date FROM bills WHERE id = ?', (id,))
     bill = cursor.fetchone()
     
-    if bill and bill[0]:
-        is_recurring, recurrence_type, old_due_date = bill[0], bill[1], bill[2]
-        
-        old_due = datetime.strptime(old_due_date, '%Y-%m-%d')
-        
-        if recurrence_type == 'weekly':
-            new_due = old_due + timedelta(weeks=1)
-        elif recurrence_type == 'biweekly':
-            new_due = old_due + timedelta(weeks=2)
-        elif recurrence_type == 'monthly':
-            new_due = old_due + timedelta(months=1)
-        elif recurrence_type == 'quarterly':
-            new_due = old_due + timedelta(months=3)
-        elif recurrence_type == 'semi-monthly':
-            if old_due.day < 15:
-                new_due = old_due.replace(day=15)
-            else:
-                if old_due.month == 12:
-                    new_due = old_due.replace(year=old_due.year+1, month=1, day=1)
+    if not bill:
+        flash('Bill not found', 'danger')
+        return redirect(url_for('budget'))
+    
+    is_recurring, recurrence_type, old_due_date = bill[0], bill[1], bill[2]
+    
+    if is_recurring and old_due_date:
+        try:
+            old_due = datetime.strptime(old_due_date, '%Y-%m-%d')
+            
+            if recurrence_type == 'weekly':
+                new_due = old_due + timedelta(weeks=1)
+            elif recurrence_type == 'biweekly':
+                new_due = old_due + timedelta(weeks=2)
+            elif recurrence_type == 'monthly':
+                new_due = old_due + timedelta(months=1)
+            elif recurrence_type == 'quarterly':
+                new_due = old_due + timedelta(months=3)
+            elif recurrence_type == 'semi-monthly':
+                if old_due.day < 15:
+                    new_due = old_due.replace(day=15)
                 else:
-                    new_due = old_due.replace(month=old_due.month+1, day=1)
-        else:
-            new_due = old_due + timedelta(months=1)
-        
-        new_due_str = new_due.strftime('%Y-%m-%d')
-        
-        cursor.execute('UPDATE bills SET due_date = ? WHERE id = ?', (new_due_str, id))
-        conn.commit()
-        
-        flash(f'Bill paid! Next due date: {new_due_str}', 'success')
+                    new_due = old_due.replace(month=old_due.month+1, day=1) if old_due.month < 12 else old_due.replace(year=old_due.year+1, month=1, day=1)
+            else:
+                new_due = old_due + timedelta(months=1)
+            
+            new_due_str = new_due.strftime('%Y-%m-%d')
+            
+            cursor.execute('UPDATE bills SET due_date = ?, is_paid = 0, paid_date = NULL WHERE id = ?', (new_due_str, id))
+            conn.commit()
+            flash(f'Next due: {new_due_str}', 'success')
+        except Exception as e:
+            cursor.execute('UPDATE bills SET is_paid = 1, paid_date = ? WHERE id = ?', (datetime.now().strftime('%Y-%m-%d'), id))
+            conn.commit()
     else:
-        db.mark_bill_paid(id)
+        cursor.execute('UPDATE bills SET is_paid = 1, paid_date = ? WHERE id = ?', (datetime.now().strftime('%Y-%m-%d'), id))
+        conn.commit()
         flash('Bill marked as paid!', 'success')
     
     conn.close()
-    return redirect(url_for('bills'))
+    return redirect(url_for('budget'))
 
 @app.route('/mark_bill_unpaid/<int:id>')
 def mark_bill_unpaid(id):
@@ -683,13 +706,36 @@ def payees():
     payees = db.get_all_payees()
     return render_template('payees.html', payees=payees)
 
+@app.route('/categories')
+def categories():
+    payees = db.get_all_payees()
+    payee_categories = list(set(p['category'] for p in payees if p.get('category')))
+    budget_categories = db.get_budget_categories()
+    return render_template('categories.html', payee_categories=payee_categories, budget_categories=budget_categories)
+
+@app.route('/add_payee_category', methods=['POST'])
+def add_payee_category():
+    category = request.form.get('category', '').strip()
+    if category:
+        db.add_payee_category_name(category)
+    flash('Category added successfully!', 'success')
+    return redirect(url_for('categories'))
+
+@app.route('/delete_payee_category', methods=['POST'])
+def delete_payee_category():
+    category = request.form.get('category', '').strip()
+    if category:
+        db.delete_payee_category_by_name(category)
+    flash('Category deleted.', 'info')
+    return redirect(url_for('categories'))
+
 @app.route('/add_payee')
 def add_payee_form():
     return render_template('add_payee.html')
 
 @app.route('/add_payee', methods=['POST'])
 def add_payee():
-    db.add_payee(
+    payee_id = db.add_payee(
         request.form['name'],
         request.form.get('category', ''),
         request.form.get('account_number', ''),
@@ -698,6 +744,24 @@ def add_payee():
     )
     flash('Payee added successfully!', 'success')
     return redirect(url_for('payees'))
+
+@app.route('/add_payee_ajax', methods=['POST'])
+def add_payee_ajax():
+    try:
+        name = request.form.get('name', '').strip()
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required'}), 400
+        
+        payee_id = db.add_payee(
+            name,
+            request.form.get('category', ''),
+            request.form.get('account_number', ''),
+            request.form.get('notes', ''),
+            request.form.get('website', '')
+        )
+        return jsonify({'success': True, 'payee_id': payee_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/update_payee/<int:id>', methods=['POST'])
 def update_payee(id):
@@ -722,6 +786,228 @@ def delete_payee(id):
 def bank_accounts():
     accounts = db.get_all_bank_accounts()
     return render_template('bank_accounts.html', accounts=accounts)
+
+@app.route('/transactions')
+def transactions():
+    account_id = request.args.get('account_id', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    search = request.args.get('search', '')
+    
+    txns = db.get_transactions(account_id, start_date, end_date)
+    
+    if search:
+        txns = [t for t in txns if search.lower() in t['description'].lower()]
+    
+    accounts = db.get_all_bank_accounts()
+    selected_account_name = None
+    if account_id:
+        selected_account = db.get_bank_account(account_id)
+        if selected_account:
+            selected_account_name = selected_account['name']
+    else:
+        selected_account_name = "All Accounts"
+    
+    return render_template('transactions.html', 
+                     transactions=txns, 
+                     accounts=accounts, 
+                     selected_account=account_id, 
+                     selected_account_name=selected_account_name)
+
+@app.route('/import_transactions', methods=['POST'])
+def import_transactions():
+    account_id = request.form.get('account_id', type=int)
+    clear_existing = request.form.get('clear_existing') == 'on'
+    skip_duplicates = request.form.get('skip_duplicates') == 'on'
+    
+    if clear_existing:
+        db.clear_transactions(account_id)
+    
+    if 'csv_file' not in request.files:
+        flash('No file uploaded', 'danger')
+        return redirect(url_for('transactions'))
+    
+    file = request.files['csv_file']
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(url_for('transactions'))
+    
+    try:
+        content = file.read().decode('utf-8')
+        reader = csv.DictReader(io.StringIO(content))
+        
+        transactions_list = []
+        duplicates = []
+        for row in reader:
+            date = row.get('Date', row.get('Posting Date', row.get('Transaction Date', ''))).strip()
+            description = row.get('Description', row.get('Transaction Description', row.get('Memo', ''))).strip()
+            amount_str = row.get('Amount', row.get('Transaction Amount', '0')).strip().replace('$', '').replace(',', '').replace(' ', '')
+            balance_str = row.get('Balance', '0').strip().replace('$', '').replace(',', '').replace(' ', '')
+            
+            try:
+                amount = float(amount_str)
+            except:
+                amount = 0
+            
+            try:
+                balance = float(balance_str)
+            except:
+                balance = 0
+            
+            if date and amount != 0:
+                transactions_list.append({
+                    'date': date,
+                    'description': description,
+                    'amount': amount,
+                    'balance': balance
+                })
+        
+        if transactions_list:
+            existing = db.get_transactions(account_id)
+            existing_keys = set((tx['transaction_date'], tx['amount']) for tx in existing)
+            
+            new_transactions = []
+            duplicate_count = 0
+            for tx in transactions_list:
+                key = (tx['date'], tx['amount'])
+                if key in existing_keys:
+                    duplicate_count += 1
+                    if not skip_duplicates:
+                        duplicates.append(tx)
+                else:
+                    new_transactions.append(tx)
+            
+            if duplicates and not skip_duplicates:
+                return render_template('transactions.html', 
+                    transactions=existing, 
+                    accounts=db.get_all_bank_accounts(), 
+                    selected_account=account_id,
+                    duplicate_prompt=True,
+                    duplicate_transactions=duplicates,
+                    new_count=len(transactions_list),
+                    csv_content=content)
+            
+            if new_transactions:
+                db.add_transactions(account_id, new_transactions)
+                
+                # Sort by date to get the oldest (most recent) transaction for balance
+                sorted_txns = sorted(new_transactions, key=lambda x: x['date'], reverse=True)
+                latest_balance = sorted_txns[0]['balance'] if sorted_txns else 0
+                
+                account = db.get_bank_account(account_id)
+                if account:
+                    db.update_bank_account(account_id, account['name'], account['account_type'], 
+                        account['institution'], account['account_number_last4'], latest_balance, account.get('website', ''))
+                
+                flash(f'Imported {len(new_transactions)} transactions', 'success')
+            else:
+                flash('All transactions already exist', 'info')
+        else:
+            flash('No transactions found in file', 'warning')
+    except Exception as e:
+        flash(f'Error importing: {str(e)}', 'danger')
+    
+    return redirect(url_for('transactions'))
+
+@app.route('/import_transactions/confirm', methods=['POST'])
+def import_transactions_confirm():
+    account_id = request.form.get('account_id', type=int)
+    skip_duplicates = True
+    
+    try:
+        content = request.form.get('csv_content', '')
+        if content:
+            reader = csv.DictReader(io.StringIO(content))
+            
+            transactions_list = []
+            for row in reader:
+                date = row.get('Date', row.get('Posting Date', row.get('Transaction Date', ''))).strip()
+                description = row.get('Description', row.get('Transaction Description', row.get('Memo', ''))).strip()
+                amount_str = row.get('Amount', row.get('Transaction Amount', '0')).strip().replace('$', '').replace(',', '').replace(' ', '')
+                balance_str = row.get('Balance', '0').strip().replace('$', '').replace(',', '').replace(' ', '')
+                
+                try:
+                    amount = float(amount_str)
+                except:
+                    amount = 0
+                
+                try:
+                    balance = float(balance_str)
+                except:
+                    balance = 0
+                
+                if date and amount != 0:
+                    transactions_list.append({
+                        'date': date,
+                        'description': description,
+                        'amount': amount,
+                        'balance': balance
+                    })
+            
+            existing = db.get_transactions(account_id)
+            existing_keys = set((tx['transaction_date'], tx['amount']) for tx in existing)
+            
+            new_transactions = [tx for tx in transactions_list if (tx['date'], tx['amount']) not in existing_keys]
+            
+            if new_transactions:
+                db.add_transactions(account_id, new_transactions)
+                
+                latest_balance = new_transactions[-1]['balance'] if new_transactions else 0
+                if latest_balance != 0:
+                    account = db.get_bank_account(account_id)
+                    if account:
+                        db.update_bank_account(account_id, account['name'], account['account_type'], 
+                            account['institution'], account['account_number_last4'], latest_balance, account.get('website', ''))
+                
+                flash(f'Imported {len(new_transactions)} transactions (skipped duplicates)', 'success')
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'danger')
+    
+    return redirect(url_for('transactions'))
+    
+    file = request.files['csv_file']
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(url_for('transactions'))
+    
+    try:
+        content = file.read().decode('utf-8')
+        reader = csv.DictReader(io.StringIO(content))
+        
+        transactions_list = []
+        for row in reader:
+            date = row.get('Date', row.get('Posting Date', row.get('Transaction Date', ''))).strip()
+            description = row.get('Description', row.get('Transaction Description', row.get('Memo', ''))).strip()
+            amount_str = row.get('Amount', row.get('Transaction Amount', '0')).strip().replace('$', '').replace(',', '')
+            balance_str = row.get('Balance', '0').strip().replace('$', '').replace(',', '')
+            
+            try:
+                amount = float(amount_str)
+            except:
+                amount = 0
+            
+            try:
+                balance = float(balance_str)
+            except:
+                balance = 0
+            
+            if date:
+                transactions_list.append({
+                    'date': date,
+                    'description': description,
+                    'amount': amount,
+                    'balance': balance
+                })
+        
+        if transactions_list:
+            db.add_transactions(account_id, transactions_list)
+            flash(f'Imported {len(transactions_list)} transactions', 'success')
+        else:
+            flash('No transactions found in file', 'warning')
+    except Exception as e:
+        flash(f'Error importing: {str(e)}', 'danger')
+    
+    return redirect(url_for('transactions'))
 
 @app.route('/add_bank_account')
 def add_bank_account_form():
@@ -759,6 +1045,78 @@ def delete_bank_account(id):
     db.delete_bank_account(id)
     flash('Bank account deleted.', 'info')
     return redirect(url_for('bank_accounts'))
+
+@app.route('/add_transaction', methods=['POST'])
+def add_transaction():
+    account_id = request.form.get('account_id', type=int)
+    transaction_date = request.form.get('transaction_date')
+    description = request.form.get('description')
+    amount = float(request.form.get('amount', 0))
+    running_balance = float(request.form.get('running_balance', 0))
+    
+    db.add_transaction(account_id, transaction_date, description, amount, running_balance)
+    
+    if account_id:
+        account = db.get_bank_account(account_id)
+        if account:
+            db.update_bank_account(account_id, account['name'], account['account_type'], 
+                account['institution'], account['account_number_last4'], running_balance, account.get('website', ''))
+    
+    flash('Transaction added successfully!', 'success')
+    return redirect(url_for('transactions', account_id=account_id))
+
+@app.route('/update_transaction', methods=['POST'])
+def update_transaction():
+    id = request.form.get('id', type=int)
+    account_id = request.form.get('account_id', type=int)
+    transaction_date = request.form.get('transaction_date')
+    description = request.form.get('description')
+    amount = float(request.form.get('amount', 0))
+    running_balance = float(request.form.get('running_balance', 0))
+    
+    db.update_transaction(id, transaction_date, description, amount, running_balance)
+    
+    if account_id:
+        account = db.get_bank_account(account_id)
+        if account:
+            db.update_bank_account(account_id, account['name'], account['account_type'], 
+                account['institution'], account['account_number_last4'], running_balance, account.get('website', ''))
+    
+    flash('Transaction updated successfully!', 'success')
+    return redirect(url_for('transactions', account_id=account_id))
+
+@app.route('/delete_transaction/<int:id>')
+def delete_transaction(id):
+    tx = db.get_transaction(id)
+    if not tx:
+        flash('Transaction not found.', 'danger')
+        return redirect(url_for('transactions'))
+    
+    account_id = tx['account_id']
+    
+    # Get remaining transactions to find new balance
+    txns = db.get_transactions(account_id)
+    new_balance = txns[0]['running_balance'] if txns else 0
+    
+    db.delete_transaction(id)
+    
+    # Update bank account balance
+    if account_id:
+        account = db.get_bank_account(account_id)
+        if account:
+            db.update_bank_account(account_id, account['name'], account['account_type'], 
+                account['institution'], account['account_number_last4'], new_balance, account.get('website', ''))
+    
+    flash('Transaction deleted.', 'info')
+    return redirect(url_for('transactions', account_id=account_id))
+
+@app.route('/clear_transactions')
+def clear_transactions():
+    account_id = request.args.get('account_id', type=int)
+    if account_id:
+        db.clear_transactions(account_id)
+        flash('All transactions cleared for this account.', 'info')
+    return redirect(url_for('transactions', account_id=account_id))
 
 @app.route('/credit_cards')
 def credit_cards():
@@ -805,7 +1163,25 @@ def delete_credit_card(id):
 @app.route('/budget')
 def budget():
     categories = db.get_budget_categories()
-    return render_template('budget.html', categories=categories)
+    all_bills = db.get_bills_with_payees()
+    
+    bills_by_category = {}
+    total_actual = 0
+    for cat in categories:
+        cat_id = cat['id']
+        cat_bills = [b for b in all_bills if b.get('category_id') == cat_id]
+        bills_by_category[cat_id] = cat_bills
+        for bill in cat_bills:
+            if bill.get('is_paid'):
+                total_actual += bill.get('amount', 0)
+    
+    total_budget = sum(cat['monthly_limit'] for cat in categories)
+    return render_template('budget.html', 
+                        categories=categories, 
+                        bills_by_category=bills_by_category,
+                        all_bills=all_bills,
+                        total_actual=total_actual,
+                        total_budget=total_budget)
 
 @app.route('/add_budget_category')
 def add_budget_category_form():
@@ -816,18 +1192,25 @@ def add_budget_category():
     db.add_budget_category(
         request.form['name'],
         float(request.form['monthly_limit']),
-        request.form.get('color', '#2E7D32')
+        request.form.get('color', '#2E7D32'),
+        request.form.get('due_date', ''),
+        request.form.get('notes', ''),
+        float(request.form.get('actual_spent') or 0)
     )
     flash('Budget category added successfully!', 'success')
     return redirect(url_for('budget'))
 
 @app.route('/update_budget_category/<int:id>', methods=['POST'])
 def update_budget_category(id):
+    actual = request.form.get('actual_spent')
     db.update_budget_category(
         id,
         request.form['name'],
         float(request.form['monthly_limit']),
-        request.form.get('color', '#2E7D32')
+        request.form.get('color', '#2E7D32'),
+        request.form.get('due_date', ''),
+        request.form.get('notes', ''),
+        float(actual) if actual else None
     )
     flash('Budget category updated successfully!', 'success')
     return redirect(url_for('budget'))
@@ -882,6 +1265,15 @@ def import_paycheck_pdf():
 @app.route('/import_paystub')
 def import_paystub_form():
     return render_template('import_paystub.html')
+
+
+@app.route('/view_paycheck/<int:id>')
+def view_paycheck(id):
+    paycheck = db.get_paycheck(id)
+    if not paycheck:
+        flash('Paycheck not found', 'danger')
+        return redirect(url_for('paychecks'))
+    return render_template('view_paycheck.html', paycheck=paycheck)
 
 
 if __name__ == '__main__':
