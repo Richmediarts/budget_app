@@ -19,7 +19,8 @@ def init_db():
             name TEXT NOT NULL,
             category TEXT,
             account_number TEXT,
-            notes TEXT
+            notes TEXT,
+            website TEXT
         );
         
         CREATE TABLE IF NOT EXISTS bank_accounts (
@@ -40,6 +41,7 @@ def init_db():
             credit_limit REAL DEFAULT 0,
             current_balance REAL DEFAULT 0,
             interest_rate REAL DEFAULT 0,
+            due_date TEXT,
             is_active INTEGER DEFAULT 1
         );
         
@@ -118,6 +120,8 @@ def init_db():
             is_recurring INTEGER DEFAULT 0,
             recurrence_type TEXT,
             notes TEXT,
+            category_id INTEGER,
+            account TEXT,
             FOREIGN KEY (payee_id) REFERENCES payees(id)
         );
         
@@ -131,6 +135,20 @@ def init_db():
     
     cursor.execute("PRAGMA table_info(paychecks)")
     existing_cols = [col[1] for col in cursor.fetchall()]
+
+    # Ensure new bills columns exist in existing DB (category_id, account)
+    cursor.execute("PRAGMA table_info(bills)")
+    bills_cols = [col[1] for col in cursor.fetchall()]
+    if 'category_id' not in bills_cols:
+        try:
+            cursor.execute('ALTER TABLE bills ADD COLUMN category_id INTEGER')
+        except:
+            pass
+    if 'account' not in bills_cols:
+        try:
+            cursor.execute('ALTER TABLE bills ADD COLUMN account TEXT')
+        except:
+            pass
     
     new_columns = {
         'pay_period_begin': 'TEXT',
@@ -190,6 +208,15 @@ def init_db():
             except:
                 pass
     
+    # Add website column to payees table if it doesn't exist
+    cursor.execute("PRAGMA table_info(payees)")
+    payees_cols = [col[1] for col in cursor.fetchall()]
+    if 'website' not in payees_cols:
+        try:
+            cursor.execute('ALTER TABLE payees ADD COLUMN website TEXT')
+        except:
+            pass
+    
     conn.commit()
     conn.close()
 
@@ -201,11 +228,11 @@ def get_all_payees():
     conn.close()
     return [dict(row) for row in payees]
 
-def add_payee(name, category, account_number, notes):
+def add_payee(name, category, account_number, notes, website=''):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO payees (name, category, account_number, notes) VALUES (?, ?, ?, ?)',
-                   (name, category, account_number, notes))
+    cursor.execute('INSERT INTO payees (name, category, account_number, notes, website) VALUES (?, ?, ?, ?, ?)',
+                   (name, category, account_number, notes, website))
     conn.commit()
     payee_id = cursor.lastrowid
     conn.close()
@@ -283,19 +310,19 @@ def get_all_credit_cards():
     conn.close()
     return [dict(row) for row in cards]
 
-def add_credit_card(name, last_four, credit_limit, current_balance, interest_rate, website=''):
+def add_credit_card(name, last_four, credit_limit, current_balance, interest_rate, due_date='', website=''):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO credit_cards (name, last_four, credit_limit, current_balance, interest_rate, website) VALUES (?, ?, ?, ?, ?, ?)',
-                   (name, last_four, credit_limit, current_balance, interest_rate, website))
+    cursor.execute('INSERT INTO credit_cards (name, last_four, credit_limit, current_balance, interest_rate, due_date, website) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (name, last_four, credit_limit, current_balance, interest_rate, due_date, website))
     conn.commit()
     conn.close()
 
-def update_credit_card(id, name, last_four, credit_limit, current_balance, interest_rate, website=''):
+def update_credit_card(id, name, last_four, credit_limit, current_balance, interest_rate, due_date='', website=''):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE credit_cards SET name=?, last_four=?, credit_limit=?, current_balance=?, interest_rate=?, website=? WHERE id=?',
-                   (name, last_four, credit_limit, current_balance, interest_rate, website, id))
+    cursor.execute('UPDATE credit_cards SET name=?, last_four=?, credit_limit=?, current_balance=?, interest_rate=?, due_date=?, website=? WHERE id=?',
+                   (name, last_four, credit_limit, current_balance, interest_rate, due_date, website, id))
     conn.commit()
     conn.close()
 
@@ -576,6 +603,25 @@ def get_dashboard_stats():
     ''')
     upcoming_bills = [dict(row) for row in cursor.fetchall()]
     
+    # Add credit cards with due dates as bills
+    cursor.execute('''
+        SELECT id, name, due_date, current_balance as amount, 'Credit Card' as payee_name
+        FROM credit_cards 
+        WHERE is_active=1 AND due_date IS NOT NULL AND due_date != ''
+        ORDER BY due_date ASC
+    ''')
+    for row in cursor.fetchall():
+        card = dict(row)
+        card['is_paid'] = 0
+        card['is_recurring'] = 0
+        card['recurrence_type'] = None
+        card['notes'] = 'Credit Card Payment'
+        upcoming_bills.append(card)
+    
+    # Sort all upcoming by due date
+    upcoming_bills.sort(key=lambda x: x['due_date'])
+    upcoming_bills = upcoming_bills[:5]
+    
     cursor.execute('SELECT * FROM paychecks ORDER BY check_date DESC LIMIT 1')
     row = cursor.fetchone()
     last_paycheck = dict(row) if row else None
@@ -626,6 +672,7 @@ def add_transactions(account_id, transactions_list):
 def get_transactions(account_id=None, start_date=None, end_date=None):
     conn = get_db()
     cursor = conn.cursor()
+    # Use original column names that have data
     query = 'SELECT * FROM transactions WHERE 1=1'
     params = []
     if account_id:
@@ -641,7 +688,17 @@ def get_transactions(account_id=None, start_date=None, end_date=None):
     cursor.execute(query, params)
     transactions = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in transactions]
+    result = []
+    for row in transactions:
+        r = dict(row)
+        # Normalize numeric amount
+        amt = r.get('amount')
+        try:
+            r['amount'] = float(amt) if amt is not None else 0
+        except Exception:
+            r['amount'] = 0
+        result.append(r)
+    return result
 
 def clear_transactions(account_id=None):
     conn = get_db()

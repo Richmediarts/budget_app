@@ -4,22 +4,13 @@
 {% block page_title %}Bank Accounts{% endblock %}
 
 {% block content %}
-<div class="row g-3">
-    <div class="col-12">
-        <div class="card mb-3" style="background: var(--primary); color: #000; border: none;">
-            <div class="card-body text-center">
-                <h5>Total Bank Balance</h5>
-                <h2 class="mb-0">${{ "%.2f"|format(total_balance) }}</h2>
-            </div>
-        </div>
-    </div>
-    
+<div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-bank"></i> Your Bank Accounts</h5>
-                <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Bank Account
+                <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Add Account
                 </a>
             </div>
             <div class="card-body">
@@ -27,15 +18,21 @@
                     <div class="row g-3">
                         {% for account in accounts %}
                             <div class="col-12 col-sm-6">
-                                <div class="account-card h-100">
+                                <div class="account-card h-100" {% if account.institution == 'First Tech Credit Union' %}style="background: url('/static/images/firsttech_logo_bg.png') center/cover; color: #fff;"{% elif account.institution == 'PNC Bank' %}style="background: url('/static/images/pnc_bg.png') center/cover; color: #fff;"{% endif %}>
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <div>
                                             <h5 class="mb-0">
-                                                <a href="#" onclick="editAccount({{ account.id }}); return false;" class="text-decoration-none text-reset">
-                                                    <i class="bi bi-{{ 'wallet' if account.account_type == 'checking' else 'piggy-bank' if account.account_type == 'savings' else 'graph-up' }}"></i> {{ account.name }}
+<a href="#" onclick="editAccount({{ account.id }}); return false;" class="text-decoration-none text-reset">
+                                                    {% if account.institution == 'First Tech Credit Union' %}
+                                                        <img src="/static/images/firsttech_logo_noname_20x20.png" alt="First Tech" style="height: 30px; width: auto; vertical-align: middle;"> {{ account.name }}
+                                                    {% elif account.institution == 'PNC Bank' %}
+                                                        <img src="/static/images/pnc_noname_20x20.png" alt="PNC" style="height: 30px; width: auto; vertical-align: middle;"> {{ account.name }}
+                                                    {% else %}
+                                                        <i class="bi bi-{{ 'wallet' if account.account_type == 'checking' else 'piggy-bank' if account.account_type == 'savings' else 'graph-up' }}"></i> {{ account.name }}
+                                                    {% endif %}
                                                 </a>
                                             </h5>
-                                            <small class="text-muted">{{ account.institution or 'Unknown Institution' }}</small>
+                                            <small class="{{ 'text-light' if account.id == 8 else 'text-muted' }}">{{ account.institution or 'Unknown Institution' }}</small>
                                         </div>
                                         <div class="dropdown">
                                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
@@ -47,7 +44,7 @@
                                             </ul>
                                         </div>
                                     </div>
-<div class="account-type-badge">
+                                    <div class="account-type-badge">
                                         <span class="badge" style="background: #00D9A5; color: #000;">{{ account.account_type|capitalize }}</span>
                                         {% if account.account_number_last4 %}
                                             <span class="badge" style="background: #52525b; color: #fff;">****{{ account.account_number_last4 }}</span>
@@ -55,17 +52,17 @@
                                     </div>
                                     <hr>
                                     <div class="balance-display">
-                                        <small class="text-muted">Current Balance</small>
+                                        <small class="{{ 'text-light' if account.id == 8 else 'text-muted' }}">Current Balance</small>
                                         <h3 class="mb-0" style="{% if account.current_balance < 0 %}color: #EF4444;{% endif %}">
                                             ${{ "%.2f"|format(account.current_balance) }}
                                         </h3>
                                     </div>
                                     <div class="mt-2 d-flex gap-3">
-                                        <a href="{{ url_for('transactions', account_id=account.id) }}" class="text-decoration-none">
+                                        <a href="{{ url_for('transactions', account_id=account.id) }}" class="text-decoration-none {{ 'text-light' if account.id == 8 else '' }}">
                                             <i class="bi bi-list-ol"></i> Transactions
                                         </a>
                                         {% if account.website %}
-                                        <a href="{{ account.website }}" target="_blank" class="text-decoration-none">
+                                        <a href="{{ account.website }}" target="_blank" class="text-decoration-none {{ 'text-light' if account.id == 8 else '' }}">
                                             <i class="bi bi-box-arrow-up-right"></i> Login
                                         </a>
                                         {% endif %}
@@ -75,26 +72,17 @@
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p class="text-muted text-center py-4">No bank accounts added yet. Add your first account to start tracking your balance.</p>
+                    <p class="text-muted text-center py-4">No bank accounts added yet. <a href="{{ url_for('add_bank_account_form') }}">Add your first account</a></p>
                 {% endif %}
             </div>
         </div>
-    </div>
-</div>
-
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card">
+        
+        <div class="card mt-3">
             <div class="card-header">
                 <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
             </div>
             <div class="card-body">
                 <div class="row g-2">
-                    <div class="col-6 col-md-3">
-                        <a href="{{ url_for('paychecks') }}" class="btn btn-outline-primary w-100">
-                            <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Paycheck</span>
-                        </a>
-                    </div>
                     <div class="col-6 col-md-3">
                         <a href="{{ url_for('add_bill_form') }}" class="btn btn-outline-success w-100">
                             <i class="bi bi-plus-circle"></i><span class="d-none d-sm-inline"> Add Bill</span>
@@ -116,71 +104,67 @@
     </div>
 </div>
 
-<script>
-const accounts = {{ accounts|tojson }};
-
-function editAccount(id) {
-    const account = accounts.find(a => a.id === id);
-    if (!account) return;
-    
-    const types = ['checking', 'savings', 'investment', 'money_market', 'other'];
-    
-    const modal = `
-        <div class="modal fade" id="editAccountModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Edit Bank Account</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form action="/update_bank_account/${account.id}" method="POST">
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Account Name</label>
-                                <input type="text" name="name" class="form-control" required value="${account.name}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Account Type</label>
-                                <select name="account_type" class="form-select" required>
-                                    ${types.map(t => `<option value="${t}" ${t === account.account_type ? 'selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1).replace('_', ' ')}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Institution</label>
-                                <input type="text" name="institution" class="form-control" value="${account.institution || ''}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Last 4 Digits</label>
-                                <input type="text" name="account_number_last4" class="form-control" maxlength="4" value="${account.account_number_last4 || ''}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Current Balance</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" name="current_balance" class="form-control" required value="${account.current_balance}">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Website</label>
-                                <input type="url" name="website" class="form-control" value="${account.website || ''}" placeholder="https://bank.com">
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
+<div class="modal fade" id="editAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editAccountForm" method="POST" action="">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Bank Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-            </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Account Name</label>
+                        <input type="text" name="name" id="editAccountName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Account Type</label>
+                        <select name="account_type" id="editAccountType" class="form-select">
+                            <option value="checking">Checking</option>
+                            <option value="savings">Savings</option>
+                            <option value="investment">Investment</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Institution</label>
+                        <input type="text" name="institution" id="editAccountInstitution" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Account Number (Last 4)</label>
+                        <input type="text" name="account_number_last4" id="editAccountLast4" class="form-control" maxlength="4" pattern="\d{4}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current Balance</label>
+                        <input type="number" step="0.01" name="current_balance" id="editAccountBalance" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Website (Optional)</label>
+                        <input type="url" name="website" id="editAccountWebsite" class="form-control" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
         </div>
-    `;
-    
-    const existingModal = document.getElementById('editAccountModal');
-    if (existingModal) existingModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    const modalInstance = new bootstrap.Modal(document.getElementById('editAccountModal'));
-    modalInstance.show();
+    </div>
+</div>
+
+<script>
+function editAccount(id) {
+    fetch(`/api/account/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('editAccountName').value = data.name || '';
+            document.getElementById('editAccountType').value = data.account_type || 'checking';
+            document.getElementById('editAccountInstitution').value = data.institution || '';
+            document.getElementById('editAccountLast4').value = data.account_number_last4 || '';
+            document.getElementById('editAccountBalance').value = data.current_balance || 0;
+            document.getElementById('editAccountWebsite').value = data.website || '';
+            document.getElementById('editAccountForm').action = `/update_bank_account/${id}`;
+            new bootstrap.Modal(document.getElementById('editAccountModal')).show();
+        });
 }
 </script>
 {% endblock %}

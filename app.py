@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, timedelta
+import calendar
 import csv
 import io
 import database as db
@@ -8,6 +9,13 @@ app = Flask(__name__)
 app.secret_key = 'budget-app-secret-key-2024'
 
 db.init_db()
+
+def add_months(dt, months):
+    # Safely add months to a date
+    year = dt.year + (dt.month - 1 + months) // 12
+    month = (dt.month - 1 + months) % 12 + 1
+    day = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
 
 @app.context_processor
 def inject_globals():
@@ -610,10 +618,18 @@ def add_bill_form():
 
 @app.route('/add_bill', methods=['POST'])
 def add_bill():
+    payee_id = request.form.get('payee_id') or None
+    amount = request.form.get('amount', '0')
+    due_date = request.form.get('due_date', '')
+    
+    if not due_date or not amount or float(amount) == 0:
+        flash('Amount and due date are required!', 'danger')
+        return redirect(url_for('add_bill_form'))
+    
     db.add_bill(
-        request.form['payee_id'] or None,
-        float(request.form['amount']),
-        request.form['due_date'],
+        payee_id,
+        float(amount),
+        due_date,
         1 if request.form.get('is_recurring') else 0,
         request.form.get('recurrence_type'),
         request.form.get('notes', ''),
@@ -649,45 +665,53 @@ def mark_bill_paid(id):
     
     if not bill:
         flash('Bill not found', 'danger')
-        return redirect(url_for('budget'))
+        return redirect(url_for('bills'))
     
     is_recurring, recurrence_type, old_due_date = bill[0], bill[1], bill[2]
     
     if is_recurring and old_due_date:
         try:
             old_due = datetime.strptime(old_due_date, '%Y-%m-%d')
+            today = datetime.now()
             
-            if recurrence_type == 'weekly':
-                new_due = old_due + timedelta(weeks=1)
-            elif recurrence_type == 'biweekly':
-                new_due = old_due + timedelta(weeks=2)
-            elif recurrence_type == 'monthly':
-                new_due = old_due + timedelta(months=1)
-            elif recurrence_type == 'quarterly':
-                new_due = old_due + timedelta(months=3)
-            elif recurrence_type == 'semi-monthly':
-                if old_due.day < 15:
-                    new_due = old_due.replace(day=15)
+            # Compute next due date - keep adding recurrence until we get a date >= today
+            new_due = old_due
+            while new_due < today:
+                if recurrence_type == 'weekly':
+                    new_due = new_due + timedelta(weeks=1)
+                elif recurrence_type == 'biweekly':
+                    new_due = new_due + timedelta(weeks=2)
+                elif recurrence_type == 'monthly':
+                    new_due = add_months(new_due, 1)
+                elif recurrence_type == 'quarterly':
+                    new_due = add_months(new_due, 3)
+                elif recurrence_type == 'semi-monthly':
+                    if new_due.day < 15:
+                        new_due = new_due.replace(day=15)
+                    else:
+                        new_due = add_months(new_due, 1)
+                        new_due = new_due.replace(day=1)
                 else:
-                    new_due = old_due.replace(month=old_due.month+1, day=1) if old_due.month < 12 else old_due.replace(year=old_due.year+1, month=1, day=1)
-            else:
-                new_due = old_due + timedelta(months=1)
+                    break
             
-            new_due_str = new_due.strftime('%Y-%m-%d')
-            
-            cursor.execute('UPDATE bills SET due_date = ?, is_paid = 0, paid_date = NULL WHERE id = ?', (new_due_str, id))
-            conn.commit()
-            flash(f'Next due: {new_due_str}', 'success')
+            # Reset to unpaid with new due date
+            cursor.execute('UPDATE bills SET is_paid=0, paid_date=NULL, due_date=? WHERE id=?',
+                        (new_due.strftime('%Y-%m-%d'), id))
+            flash(f'Bill marked as paid. Next due: {new_due.strftime("%m/%d/%Y")}', 'success')
         except Exception as e:
-            cursor.execute('UPDATE bills SET is_paid = 1, paid_date = ? WHERE id = ?', (datetime.now().strftime('%Y-%m-%d'), id))
-            conn.commit()
+            flash(f'Error updating recurring bill: {e}', 'danger')
+            # Still mark as paid for this period
+            cursor.execute('UPDATE bills SET is_paid=1, paid_date=? WHERE id=?',
+                        (datetime.now().strftime('%Y-%m-%d'), id))
     else:
-        cursor.execute('UPDATE bills SET is_paid = 1, paid_date = ? WHERE id = ?', (datetime.now().strftime('%Y-%m-%d'), id))
-        conn.commit()
+        cursor.execute('UPDATE bills SET is_paid=1, paid_date=? WHERE id=?',
+                    (datetime.now().strftime('%Y-%m-%d'), id))
         flash('Bill marked as paid!', 'success')
     
+    conn.commit()
     conn.close()
-    return redirect(url_for('budget'))
+    
+    return redirect(url_for('bills'))
 
 @app.route('/mark_bill_unpaid/<int:id>')
 def mark_bill_unpaid(id):
@@ -864,7 +888,7 @@ def import_transactions():
         
         if transactions_list:
             existing = db.get_transactions(account_id)
-            existing_keys = set((tx['transaction_date'], tx['amount']) for tx in existing)
+            existing_keys = set((tx['date'], tx['amount']) for tx in existing)
             
             new_transactions = []
             duplicate_count = 0
@@ -945,7 +969,7 @@ def import_transactions_confirm():
                     })
             
             existing = db.get_transactions(account_id)
-            existing_keys = set((tx['transaction_date'], tx['amount']) for tx in existing)
+            existing_keys = set((tx['date'], tx['amount']) for tx in existing)
             
             new_transactions = [tx for tx in transactions_list if (tx['date'], tx['amount']) not in existing_keys]
             
@@ -1091,22 +1115,21 @@ def delete_transaction(id):
     if not tx:
         flash('Transaction not found.', 'danger')
         return redirect(url_for('transactions'))
-    
+
     account_id = tx['account_id']
-    
-    # Get remaining transactions to find new balance
-    txns = db.get_transactions(account_id)
-    new_balance = txns[0]['running_balance'] if txns else 0
-    
+
+    # Delete first, then recompute balance from remaining transactions
     db.delete_transaction(id)
-    
-    # Update bank account balance
+
+    new_balance = 0
     if account_id:
+        txns = db.get_transactions(account_id)
+        new_balance = txns[0]['balance'] if txns else 0
         account = db.get_bank_account(account_id)
         if account:
             db.update_bank_account(account_id, account['name'], account['account_type'], 
                 account['institution'], account['account_number_last4'], new_balance, account.get('website', ''))
-    
+
     flash('Transaction deleted.', 'info')
     return redirect(url_for('transactions', account_id=account_id))
 
@@ -1135,10 +1158,12 @@ def add_credit_card():
         float(request.form['credit_limit']),
         float(request.form['current_balance']),
         float(request.form.get('interest_rate', 0)),
+        request.form.get('due_date', ''),
         request.form.get('website', '')
     )
     flash('Credit card added successfully!', 'success')
     return redirect(url_for('credit_cards'))
+
 
 @app.route('/update_credit_card/<int:id>', methods=['POST'])
 def update_credit_card(id):
@@ -1149,10 +1174,12 @@ def update_credit_card(id):
         float(request.form['credit_limit']),
         float(request.form['current_balance']),
         float(request.form.get('interest_rate', 0)),
+        request.form.get('due_date', ''),
         request.form.get('website', '')
     )
     flash('Credit card updated successfully!', 'success')
     return redirect(url_for('credit_cards'))
+
 
 @app.route('/delete_credit_card/<int:id>')
 def delete_credit_card(id):
@@ -1224,6 +1251,14 @@ def delete_budget_category(id):
 @app.route('/api/dashboard_stats')
 def api_dashboard_stats():
     return jsonify(db.get_dashboard_stats())
+
+
+@app.route('/api/account/<int:id>')
+def api_account(id):
+    account = db.get_bank_account(id)
+    if account:
+        return jsonify(dict(account))
+    return jsonify({'error': 'Account not found'}), 404
 
 
 @app.route('/import_paycheck_pdf', methods=['POST'])
