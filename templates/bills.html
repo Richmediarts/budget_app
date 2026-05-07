@@ -8,109 +8,139 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <div class="mb-3 d-flex">
-                    <input type="text" id="searchBills" class="form-control" placeholder="Search bills...">
-                    <button type="button" id="searchBtn" class="btn btn-primary ms-2">Search</button>
-                </div>
-                {% if bills %}
-                    <div class="table-responsive">
-                        <table class="table table-hover" id="billsTable">
-                            <thead>
-                                <tr>
-                                    <th>Payee</th>
-                                    <th>Amount</th>
-                                    <th>Due Date</th>
-                                    <th>Status</th>
-                                    <th>Days Until Due</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for bill in bills %}
-                                    {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d').date() %}
-                                    {% set today = datetime.now().date() %}
-                                    {% set days_until = (due_date - today).days %}
-                                    <tr class="{% if bill.is_paid %}table-success{% elif days_until < 0 %}table-danger{% elif days_until <= 3 %}table-warning{% endif %}">
-                                        <td>
-                                            <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
-                                            {% if bill.payee_category %}
-                                                <br><small class="text-muted">{{ bill.payee_category }}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td class="fw-bold">${{ "%.2f"|format(bill.amount) }}</td>
-                                        <td>{{ bill.due_date }}</td>
-                                        <td>
-                                            {% if bill.is_paid %}
-                                                <span class="badge bg-success">Paid</span>
-                                                {% if bill.paid_date %}
-                                                    <br><small class="text-muted">{{ bill.paid_date }}</small>
-                                                {% endif %}
-                                            {% elif days_until < 0 %}
-                                                <span class="badge bg-danger">Overdue</span>
-                                            {% elif days_until == 0 %}
-                                                <span class="badge bg-warning">Due Today</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary">Pending</span>
-                                            {% endif %}
-                                        </td>
-<td>
-                                                {% if bill.is_paid %}
-                                                    <span class="badge" style="background: var(--primary); color: #000;">Paid</span>
-                                                {% elif days_until < 0 %}
-                                                    <span class="badge" style="background: #EF4444; color: #fff;">Overdue</span>
-                                                {% elif days_until == 0 %}
-                                                    <span class="badge" style="background: #F59E0B; color: #000;">Due Today</span>
-                                                {% else %}
-                                                    <span class="badge" style="background: #52525b; color: #fff;">Pending</span>
-                                                {% endif %}
-                                            </td>
-                                        <td class="text-end">
-                                            <div class="btn-group btn-group-sm">
-                                                {% if not bill.is_paid %}
-                                                    <a href="{{ url_for('mark_bill_paid', id=bill.id) }}" class="btn btn-success">
-                                                        <i class="bi bi-check-circle"></i>
-                                                    </a>
-                                                {% else %}
-                                                    <a href="{{ url_for('mark_bill_unpaid', id=bill.id) }}" class="btn btn-secondary">
-                                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                                    </a>
-                                                {% endif %}
-                                                <button class="btn btn-primary" onclick="editBill({{ bill.id }})">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <a href="{{ url_for('delete_bill', id=bill.id) }}" class="btn btn-danger" onclick="return confirm('Delete this bill?')">
-                                                    <i class="bi bi-trash"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted text-center py-4">No bills found. Add your first bill to start tracking.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="mb-3 d-flex gap-2 flex-wrap">
                     <div class="btn-group" role="group">
                         <a href="{{ url_for('bills', filter='all') }}" class="btn btn-sm {% if filter_type == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
                         <a href="{{ url_for('bills', filter='unpaid') }}" class="btn btn-sm {% if filter_type == 'unpaid' %}btn-primary{% else %}btn-outline-primary{% endif %}">Unpaid</a>
                         <a href="{{ url_for('bills', filter='paid') }}" class="btn btn-sm {% if filter_type == 'paid' %}btn-primary{% else %}btn-outline-primary{% endif %}">Paid</a>
                         <a href="{{ url_for('bills', filter='overdue') }}" class="btn btn-sm {% if filter_type == 'overdue' %}btn-danger{% else %}btn-outline-danger{% endif %}">Overdue</a>
                     </div>
-                    <a href="{{ url_for('add_bill_form') }}" class="btn btn-primary">
+                    <input type="text" id="searchBills" class="form-control form-control-sm" placeholder="Search bills..." style="max-width: 250px;">
+                    <a href="{{ url_for('add_bill_form') }}" class="btn btn-sm btn-primary">
                         <i class="bi bi-plus-circle"></i> Add New Bill
                     </a>
                 </div>
+
+                {% if grouped_months %}
+                    <div class="accordion" id="billsAccordion">
+                        {% for month in grouped_months %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#month{{ loop.index }}" aria-expanded="false">
+                                        <strong>{{ month.label }}</strong>
+                                        <span class="ms-3 text-muted">({{ month.period_count }} pay periods)</span>
+                                        <span class="ms-auto me-3 fw-bold">${{ "%.2f"|format(month.total) }}</span>
+                                    </button>
+                                </h2>
+                                <div id="month{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#billsAccordion">
+                                    <div class="accordion-body p-0">
+                                        {% for period in month.periods_list %}
+                                            <div class="border-bottom">
+                                                <div class="d-flex align-items-center px-3 py-2" style="background: rgba(255,255,255,0.03);">
+                                                    <span class="fw-semibold small">{{ period.label }}</span>
+                                                    <span class="ms-auto fw-bold small">${{ "%.2f"|format(period.total) }}</span>
+                                                </div>
+                                                {% if period.bills %}
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover mb-0 period-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Payee</th>
+                                                                    <th>Amount</th>
+                                                                    <th>Due Date</th>
+                                                                    <th>Status</th>
+                                                                    <th>Days Until Due</th>
+                                                                    <th>Actions</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for bill in period.bills %}
+                                                                    {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d').date() %}
+                                                                    {% set today = datetime.now().date() %}
+                                                                    {% set days_until = (due_date - today).days %}
+                                                                    <tr class="{% if bill.is_paid %}table-success{% elif days_until < 0 %}table-danger{% elif days_until <= 3 %}table-warning{% endif %}">
+                                                                        <td>
+                                                                            <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
+                                                                            {% if bill.payee_category %}
+                                                                                <br><small class="text-muted">{{ bill.payee_category }}</small>
+                                                                            {% endif %}
+                                                                        </td>
+                                                                        <td class="fw-bold">${{ "%.2f"|format(bill.amount) }}</td>
+                                                                        <td>{{ bill.due_date }}</td>
+                                                                        <td>
+                                                                            {% if bill.is_paid %}
+                                                                                <span class="badge bg-success">Paid</span>
+                                                                                {% if bill.paid_date %}
+                                                                                    <br><small class="text-muted">{{ bill.paid_date }}</small>
+                                                                                {% endif %}
+                                                                            {% elif days_until < 0 %}
+                                                                                <span class="badge bg-danger">Overdue</span>
+                                                                            {% elif days_until == 0 %}
+                                                                                <span class="badge bg-warning">Due Today</span>
+                                                                            {% else %}
+                                                                                <span class="badge bg-secondary">Pending</span>
+                                                                            {% endif %}
+                                                                        </td>
+                                                                        <td>
+                                                                            {% if bill.is_paid %}
+                                                                                <span class="badge" style="background: var(--primary); color: #000;">Paid</span>
+                                                                            {% elif days_until < 0 %}
+                                                                                <span class="badge" style="background: #EF4444; color: #fff;">Overdue</span>
+                                                                            {% elif days_until == 0 %}
+                                                                                <span class="badge" style="background: #F59E0B; color: #000;">Due Today</span>
+                                                                            {% else %}
+                                                                                <span class="badge" style="background: #52525b; color: #fff;">{{ days_until }} days</span>
+                                                                            {% endif %}
+                                                                        </td>
+                                                                        <td class="text-end">
+                                                                            <div class="btn-group btn-group-sm">
+                                                                                {% if not bill.is_paid %}
+                                                                                    <form action="{{ url_for('mark_bill_paid', id=bill.id) }}" method="POST" style="display:inline;">
+                                                                                        <button type="submit" class="btn btn-success" onclick="return confirm('Mark as paid?')">
+                                                                                            <i class="bi bi-check-circle"></i>
+                                                                                        </button>
+                                                                                    </form>
+                                                                                {% else %}
+                                                                                    <a href="{{ url_for('mark_bill_unpaid', id=bill.id) }}" class="btn btn-secondary">
+                                                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                                                    </a>
+                                                                                {% endif %}
+                                                                                <button class="btn btn-primary" onclick="editBill({{ bill.id }})">
+                                                                                    <i class="bi bi-pencil"></i>
+                                                                                </button>
+                                                                                <a href="{{ url_for('delete_bill', id=bill.id) }}" class="btn btn-danger" onclick="return confirm('Delete this bill?')">
+                                                                                    <i class="bi bi-trash"></i>
+                                                                                </a>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr style="border-top: 2px solid var(--primary);">
+                                                                    <td><strong>Period Total</strong></td>
+                                                                    <td class="fw-bold fs-5">${{ "%.2f"|format(period.total) }}</td>
+                                                                    <td></td>
+                                                                    <td></td>
+                                                                    <td></td>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted text-center py-2 small">No bills in this period.</p>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-4">No bills found. Add your first bill to start tracking.</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -153,21 +183,20 @@
 <script>
 const bills = {{ bills|tojson }};
 const payees = {{ payees|tojson }};
-const categories = {{ categories|default([])|tojson }};
+const categories = {{ category_options|default([])|tojson }};
+const bankAccounts = {{ bank_accounts|default([])|tojson }};
 
 document.getElementById('searchBills')?.addEventListener('input', function(e) {
     const search = e.target.value.toLowerCase();
-    document.querySelectorAll('#billsTable tbody tr').forEach(row => {
+    document.querySelectorAll('.period-table tbody tr').forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(search) ? '' : 'none';
     });
-});
-
-document.getElementById('searchBtn')?.addEventListener('click', function() {
-    const search = document.getElementById('searchBills').value.toLowerCase();
-    document.querySelectorAll('#billsTable tbody tr').forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(search) ? '' : 'none';
+    // Show/hide accordion items based on visible rows
+    document.querySelectorAll('.accordion-item').forEach(item => {
+        const visibleRows = item.querySelectorAll('.period-table tbody tr[style*="display: none"]');
+        const totalRows = item.querySelectorAll('.period-table tbody tr');
+        // Keep accordion visible if it has any rows at all; filtering is within
     });
 });
 
@@ -201,7 +230,7 @@ function editBill(id) {
                                 <label class="form-label">Budget Category</label>
                                 <select name="category_id" class="form-select">
                                     <option value="">-- Select Category --</option>
-                                    ${categories.map(c => `<option value="${c.id}" ${c.id === bill.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                                    ${categories.map(c => `<option value="${c.id}" ${c.id === bill.category_id ? 'selected' : ''}>${c.display}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -234,10 +263,7 @@ function editBill(id) {
                                 <label class="form-label">Account</label>
                                 <select name="account" class="form-select">
                                     <option value="">-- Select Account --</option>
-                                    <option value="Joint" ${bill.account === 'Joint' ? 'selected' : ''}>Joint</option>
-                                    <option value="My Personal" ${bill.account === 'My Personal' ? 'selected' : ''}>My Personal</option>
-                                    <option value="Ella's Personal" ${bill.account === "Ella's Personal" ? 'selected' : ''}>Ella's Personal</option>
-                                    <option value="Auto draft" ${bill.account === 'Auto draft' ? 'selected' : ''}>Auto draft</option>
+                                    ${bankAccounts.map(a => `<option value="${a.name}" ${bill.account === a.name ? 'selected' : ''}>${a.name}${a.institution ? ' (' + a.institution + ')' : ''}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -261,6 +287,17 @@ function editBill(id) {
     document.body.insertAdjacentHTML('beforeend', modal);
     const modalInstance = new bootstrap.Modal(document.getElementById('editBillModal'));
     modalInstance.show();
+}
+
+function markPaid(event, id) {
+    event.preventDefault();
+    fetch('/mark_bill_paid/' + id, {
+        method: 'POST'
+    })
+        .then(() => window.location.reload())
+        .catch(err => {
+            window.location.href = '/mark_bill_paid/' + id;
+        });
 }
 </script>
 {% endblock %}

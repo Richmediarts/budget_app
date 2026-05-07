@@ -4,9 +4,9 @@
 {% block page_title %}Budget{% endblock %}
 
 {% block content %}
-<div class="row g-3">
+<div class="row g-3 mb-4">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Monthly Budget</h5>
             <a href="{{ url_for('add_budget_category_form') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Category
@@ -15,77 +15,157 @@
     </div>
 </div>
 
-{% for category in categories %}
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center" style="background: {{ category.color }}; color: white;">
-        <h5 class="mb-0">{{ category.name }}</h5>
-        <button class="btn btn-sm btn-light" onclick="addExpenseToCategory({{ category.id }})">
+<div id="budgetAccordion">
+{% for parent in hierarchical_categories %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center" style="background: {{ parent.color }}; color: white; cursor: pointer;" onclick="toggleCategory({{ parent.id }})" data-target="cat-body-{{ parent.id }}">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-chevron-down collapse-icon" id="icon-cat-body-{{ parent.id }}"></i>
+            <div>
+                <h5 class="mb-0">{{ parent.name }}</h5>
+                <small class="opacity-75">${{ "%.2f"|format(parent.monthly_limit) }} budgeted</small>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); addExpenseToCategory({{ parent.id }})">
             <i class="bi bi-plus"></i> Add Expense
         </button>
     </div>
-    <div class="card-body p-0">
-        <table class="table mb-0">
-<thead>
-                <tr>
-                    <th>EXPENSE</th>
-                    <th>DUE DATE</th>
-                    <th class="text-end">BUDGET</th>
-                    <th class="text-end">ACTUAL</th>
-                    <th class="text-end">REMAINING</th>
-                    <th>ACCOUNT</th>
-                    <th>NOTES</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set expenses = bills_by_category[category.id] if category.id in bills_by_category else [] %}
-                {% set cat_budget = category.monthly_limit %}
-                {% set cat_actual = 0 %}
-                {% for expense in expenses %}
-                {% set cat_actual = cat_actual + (expense.amount if expense.is_paid else 0) %}
-                <tr data-expense-id="{{ expense.id }}">
-                    <td>{{ expense.payee_name or 'Unknown' }}</td>
-                    <td class="editable-cell" data-expense-id="{{ expense.id }}" data-field="due_date" data-type="date">
-                        {{ expense.due_date or '-' }}
-                    </td>
-                    <td class="text-end editable-cell" data-expense-id="{{ expense.id }}" data-field="amount" data-type="number">
-                        ${{ "%.2f"|format(expense.amount) }}
-                    </td>
-                    <td class="text-end {% if expense.is_paid %}text-success{% endif %}">
-                        {% if expense.is_paid %}${{ "%.2f"|format(expense.amount) }}{% else %}$0.00{% endif %}
-                    </td>
-                    <td class="text-end">
-                        ${{ "%.2f"|format(expense.amount - (expense.amount if expense.is_paid else 0)) }}
-                    </td>
-                    <td class="editable-cell" data-expense-id="{{ expense.id }}" data-field="account" data-type="text">
-                        {{ expense.account or '-' }}
-                    </td>
-                    <td>{{ expense.notes or '-' }}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-{% if expense.is_paid %}secondary{% else %}success{% endif %}" onclick="togglePaid({{ expense.id }})">
-                            <i class="bi bi-{% if expense.is_paid %}check-circle{% else %}circle{% endif %}"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editExpense({{ expense.id }})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr class="table-light fw-bold">
-                    <td>Total</td>
-                    <td></td>
-                    <td class="text-end">${{ "%.2f"|format(cat_budget) }}</td>
-                    <td class="text-end">${{ "%.2f"|format(cat_actual) }}</td>
-                    <td class="text-end">${{ "%.2f"|format(cat_budget - cat_actual) }}</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="collapse show" id="cat-body-{{ parent.id }}">
+        {% set parent_expenses = bills_by_category[parent.id] if parent.id in bills_by_category else [] %}
+        {% set parent_actual = 0 %}
+        {% for expense in parent_expenses %}
+        {% set parent_actual = parent_actual + (expense.amount if expense.is_paid else 0) %}
+        {% endfor %}
+        
+        <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <small class="text-muted">Spent: ${{ "%.2f"|format(parent_actual) }}</small>
+                <small class="text-muted">Remaining: ${{ "%.2f"|format(parent.monthly_limit - parent_actual) }}</small>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar {% if parent.monthly_limit > 0 and parent_actual / parent.monthly_limit > 0.9 %}bg-danger{% elif parent.monthly_limit > 0 and parent_actual / parent.monthly_limit > 0.7 %}bg-warning{% else %}bg-success{% endif %}" 
+                     style="width: {{ [100, (parent_actual / parent.monthly_limit * 100)|round]|min if parent.monthly_limit > 0 else 0 }}%"></div>
+            </div>
+        </div>
+
+        {% if parent.children %}
+        <div class="mb-3 ps-3 border-start border-2" style="border-color: {{ parent.color }} !important;">
+            <h6 class="text-muted mb-2">Sub-categories</h6>
+            {% for child in parent.children %}
+            {% set child_expenses = bills_by_category[child.id] if child.id in bills_by_category else [] %}
+            {% set child_actual = 0 %}
+            {% for expense in child_expenses %}
+            {% set child_actual = child_actual + (expense.amount if expense.is_paid else 0) %}
+            {% endfor %}
+            <div class="d-flex justify-content-between align-items-center py-1">
+                <div>
+                    <span class="color-dot" style="background-color: {{ child.color }};"></span>
+                    <small>{{ child.name }}</small>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">${{ "%.2f"|format(child.monthly_limit) }} budgeted</small>
+                    <button class="btn btn-sm btn-outline-light ms-2" onclick="addExpenseToCategory({{ child.id }})">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+            </div>
+            {% if child_actual > 0 or child_expenses %}
+            <div class="progress mb-2" style="height: 4px;">
+                <div class="progress-bar {% if child.monthly_limit > 0 and child_actual / child.monthly_limit > 0.9 %}bg-danger{% elif child.monthly_limit > 0 and child_actual / child.monthly_limit > 0.7 %}bg-warning{% else %}bg-success{% endif %}" 
+                     style="width: {{ [100, (child_actual / child.monthly_limit * 100)|round]|min if child.monthly_limit > 0 else 0 }}%"></div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Expense</th>
+                        <th>Due Date</th>
+                        <th class="text-end">Budget</th>
+                        <th class="text-end">Actual</th>
+                        <th class="text-end">Remaining</th>
+                        <th>Account</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in parent_expenses %}
+                    <tr data-expense-id="{{ expense.id }}">
+                        <td>{{ expense.payee_name or 'Unknown' }}</td>
+                        <td class="editable-cell" data-expense-id="{{ expense.id }}" data-field="due_date" style="cursor: pointer;">
+                            {{ expense.due_date or '-' }}
+                        </td>
+                        <td class="text-end editable-cell" data-expense-id="{{ expense.id }}" data-field="amount" style="cursor: pointer;">
+                            ${{ "%.2f"|format(expense.amount) }}
+                        </td>
+                        <td class="text-end {% if expense.is_paid %}text-success{% endif %}">
+                            {% if expense.is_paid %}${{ "%.2f"|format(expense.amount) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">{{ "" if not expense.is_paid else "$%.2f"|format(expense.amount) }}</td>
+                        <td>{{ expense.account or '-' }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                {% if not expense.is_paid %}
+                                <form action="{{ url_for('mark_bill_paid', id=expense.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mark as paid?')">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <button class="btn btn-outline-primary btn-sm" onclick="editExpense({{ expense.id }})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if parent.children %}
+                        {% for child in parent.children %}
+                            {% set child_expenses = bills_by_category[child.id] if child.id in bills_by_category else [] %}
+                            {% for expense in child_expenses %}
+                            <tr data-expense-id="{{ expense.id }}" style="background: rgba(255,255,255,0.02);">
+                                <td style="padding-left: 2rem;"><small>└─ {{ expense.payee_name or 'Unknown' }}</small></td>
+                                <td><small>{{ expense.due_date or '-' }}</small></td>
+                                <td class="text-end"><small>${{ "%.2f"|format(expense.amount) }}</small></td>
+                                <td class="text-end {% if expense.is_paid %}text-success{% endif %}">
+                                    <small>{% if expense.is_paid %}${{ "%.2f"|format(expense.amount) }}{% else %}-{% endif %}</small>
+                                </td>
+                                <td class="text-end"><small>{{ "" if not expense.is_paid else "$%.2f"|format(expense.amount) }}</small></td>
+                                <td><small>{{ expense.account or '-' }}</small></td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        {% if not expense.is_paid %}
+                                        <form action="{{ url_for('mark_bill_paid', id=expense.id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mark as paid?')">
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <button class="btn btn-outline-primary btn-sm" onclick="editExpense({{ expense.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if not parent_expenses and (not parent.children or not parent.children|selectattr('id')|list) %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-2">No expenses in this category.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endfor %}
+</div>
 
 <div class="row mt-3">
     <div class="col-12">
@@ -105,26 +185,44 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for category in categories %}
-                            {% set expenses = bills_by_category[category.id] if category.id in bills_by_category else [] %}
-                            {% set cat_budget = category.monthly_limit %}
-                            {% set cat_actual = 0 %}
-                            {% for expense in expenses %}
-                            {% set cat_actual = cat_actual + (expense.amount if expense.is_paid else 0) %}
-                            {% endfor %}
-                            <tr>
-                                <td>
-                                    <span class="color-dot" style="background-color: {{ category.color }};"></span>
-                                    {{ category.name }}
-                                </td>
-                                <td class="text-end">${{ "%.2f"|format(cat_budget) }}</td>
-                                <td class="text-end">${{ "%.2f"|format(cat_actual) }}</td>
-                                <td class="text-end {% if cat_budget - cat_actual < 0 %}text-danger{% else %}text-success{% endif %}">
-                                    ${{ "%.2f"|format(cat_budget - cat_actual) }}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
+                                {% for parent in hierarchical_categories %}
+                                {% set parent_expenses = bills_by_category[parent.id] if parent.id in bills_by_category else [] %}
+                                {% set parent_actual = 0 %}
+                                {% for expense in parent_expenses %}
+                                {% set parent_actual = parent_actual + (expense.amount if expense.is_paid else 0) %}
+                                {% endfor %}
+                                <tr style="background: rgba(255,255,255,0.05);">
+                                    <td>
+                                        <strong>{{ parent.name }}</strong>
+                                    </td>
+                                    <td class="text-end"><strong>${{ "%.2f"|format(parent.monthly_limit) }}</strong></td>
+                                    <td class="text-end"><strong>${{ "%.2f"|format(parent_actual) }}</strong></td>
+                                    <td class="text-end {% if parent.monthly_limit - parent_actual < 0 %}text-danger{% else %}text-success{% endif %}">
+                                        <strong>${{ "%.2f"|format(parent.monthly_limit - parent_actual) }}</strong>
+                                    </td>
+                                </tr>
+                                {% if parent.children %}
+                                    {% for child in parent.children %}
+                                    {% set child_expenses = bills_by_category[child.id] if child.id in bills_by_category else [] %}
+                                    {% set child_actual = 0 %}
+                                    {% for expense in child_expenses %}
+                                    {% set child_actual = child_actual + (expense.amount if expense.is_paid else 0) %}
+                                    {% endfor %}
+                                    <tr>
+                                        <td style="padding-left: 2.5rem;">
+                                            <span class="color-dot" style="background-color: {{ child.color }};"></span>
+                                            └─ {{ child.name }}
+                                        </td>
+                                        <td class="text-end">${{ "%.2f"|format(child.monthly_limit) }}</td>
+                                        <td class="text-end">${{ "%.2f"|format(child_actual) }}</td>
+                                        <td class="text-end {% if child.monthly_limit - child_actual < 0 %}text-danger{% else %}text-success{% endif %}">
+                                            ${{ "%.2f"|format(child.monthly_limit - child_actual) }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
                         <tfoot class="fw-bold">
                             <tr>
                                 <td>Total</td>
@@ -141,8 +239,104 @@
 </div>
 
 <script>
-const categories = {{ categories|tojson }};
+const category_options = {{ category_options|tojson }};
 const bills = {{ all_bills|tojson }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.editable-cell').forEach(cell => {
+        cell.addEventListener('click', function() {
+            const expenseId = this.dataset.expenseId;
+            const field = this.dataset.field;
+            const currentValue = this.textContent.trim().replace('$', '').replace(',', '');
+            const isDate = field === 'due_date';
+            const isNumber = field === 'amount';
+            
+            let input;
+            if (isDate) {
+                input = document.createElement('input');
+                input.type = 'date';
+                input.value = currentValue !== '-' ? currentValue : '';
+                input.className = 'form-control form-control-sm';
+            } else if (isNumber) {
+                input = document.createElement('input');
+                input.type = 'number';
+                input.step = '0.01';
+                input.value = currentValue;
+                input.className = 'form-control form-control-sm text-end';
+            } else {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentValue !== '-' ? currentValue : '';
+                input.className = 'form-control form-control-sm';
+            }
+            
+            input.style.width = '100%';
+            this.innerHTML = '';
+            this.appendChild(input);
+            input.focus();
+            
+            function saveEdit() {
+                const newValue = input.value;
+                const formData = new FormData();
+                formData.append(field, newValue);
+                
+                fetch(`/update_bill_ajax/${expenseId}`, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (isNumber) {
+                            cell.innerHTML = '$' + parseFloat(newValue).toFixed(2);
+                        } else {
+                            cell.innerHTML = newValue || '-';
+                        }
+                        updateCategoryProgress();
+                    } else {
+                        alert('Error saving: ' + (data.error || 'Unknown error'));
+                        location.reload();
+                    }
+                })
+                .catch(err => {
+                    alert('Error saving changes');
+                    location.reload();
+                });
+            }
+            
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    input.blur();
+                }
+                if (e.key === 'Escape') {
+                    location.reload();
+                }
+            });
+        });
+    });
+});
+
+function updateCategoryProgress() {
+    location.reload();
+}
+
+function toggleCategory(id) {
+    const target = document.getElementById('cat-body-' + id);
+    const icon = document.getElementById('icon-cat-body-' + id);
+    if (target) {
+        if (target.classList.contains('show')) {
+            target.classList.remove('show');
+            icon.classList.remove('bi-chevron-down');
+            icon.classList.add('bi-chevron-right');
+        } else {
+            target.classList.add('show');
+            icon.classList.remove('bi-chevron-right');
+            icon.classList.add('bi-chevron-down');
+        }
+    }
+}
 
 function billsByCategory(catId) {
     return bills.filter(b => b.category_id === catId);

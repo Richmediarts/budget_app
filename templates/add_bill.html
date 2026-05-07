@@ -30,8 +30,8 @@
                         <label class="form-label">Budget Category (optional)</label>
                         <select name="category_id" class="form-select">
                             <option value="">-- Select Category --</option>
-                            {% for cat in categories %}
-                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% for cat in category_options %}
+                                <option value="{{ cat.id }}">{{ cat.display }}</option>
                             {% endfor %}
                         </select>
                         <small class="text-muted">Link this bill to a budget category for tracking</small>
@@ -66,9 +66,9 @@
                         <label class="form-label">Account</label>
                         <select name="account" class="form-select">
                             <option value="">-- Select Account --</option>
-                            <option value="Joint">Joint</option>
-                            <option value="My Personal">My Personal</option>
-                            <option value="Ella's Personal">Ella's Personal</option>
+                            {% for acct in bank_accounts %}
+                                <option value="{{ acct.name }}">{{ acct.name }}{% if acct.institution %} ({{ acct.institution }}){% endif %}</option>
+                            {% endfor %}
                             <option value="Auto draft">Auto draft</option>
                         </select>
                     </div>

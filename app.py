@@ -17,15 +17,40 @@ def add_months(dt, months):
     day = min(dt.day, calendar.monthrange(year, month)[1])
     return dt.replace(year=year, month=month, day=day)
 
+def get_category_options():
+    hierarchical = db.get_budget_categories()
+    options = []
+    all_limits = 0
+    for parent in hierarchical:
+        options.append({'id': parent['id'], 'display': parent['name']})
+        all_limits += parent['monthly_limit']
+        for child in parent.get('children', []):
+            options.append({'id': child['id'], 'display': '  └─ ' + child['name']})
+            all_limits += child['monthly_limit']
+    db._cached_total_budget = all_limits
+    return options
+
+def get_hierarchical_and_flat():
+    hierarchical = db.get_budget_categories()
+    flat = []
+    for parent in hierarchical:
+        flat.append(parent)
+        flat.extend(parent.get('children', []))
+    return hierarchical, flat
+
 @app.context_processor
 def inject_globals():
+    cat_opts = get_category_options()
+    bank_accounts = db.get_all_bank_accounts()
     return {
         'current_date': datetime.now().strftime('%B %d, %Y'),
         'datetime': datetime,
-        'total_balance': sum(a['current_balance'] for a in db.get_all_bank_accounts()),
+        'total_balance': sum(a['current_balance'] for a in bank_accounts),
         'total_debt': sum(c['current_balance'] for c in db.get_all_credit_cards()),
-        'total_budget': sum(c['monthly_limit'] for c in db.get_budget_categories()),
-        'next_paycheck_date': db.get_next_paycheck_date()
+        'total_budget': db._cached_total_budget,
+        'next_paycheck_date': db.get_next_paycheck_date(),
+        'category_options': cat_opts,
+        'bank_accounts': bank_accounts
     }
 
 @app.route('/')
@@ -606,15 +631,99 @@ def bills():
     else:
         bills = all_bills
     
+    # Calculate pay periods from last paycheck
+    paychecks = db.get_all_paychecks()
+    last_pay_date = None
+    if paychecks:
+        for pc in paychecks:
+            if pc.get('check_date'):
+                d = datetime.strptime(pc['check_date'], '%Y-%m-%d')
+                if last_pay_date is None or d > last_pay_date:
+                    last_pay_date = d
+    
+    # Generate pay periods (biweekly) from last paycheck, going back and forward
+    pay_periods = []
+    if last_pay_date:
+        # A pay period starts the day after the previous paycheck and ends on the next paycheck
+        # Go back to cover old bills
+        period_start = last_pay_date + timedelta(days=1)
+        for _ in range(12):
+            period_start -= timedelta(weeks=2)
+        
+        for _ in range(26):
+            period_end = period_start + timedelta(weeks=2) - timedelta(days=1)
+            pay_periods.append({
+                'start': period_start.strftime('%Y-%m-%d'),
+                'end': period_end.strftime('%Y-%m-%d'),
+                'label': f'{period_start.strftime("%m/%d/%Y")} - {period_end.strftime("%m/%d/%Y")}'
+            })
+            period_start = period_end + timedelta(days=1)
+    
+    # Group bills by month then by pay period
+    months = {}
+    for bill in bills:
+        try:
+            due = datetime.strptime(bill['due_date'], '%Y-%m-%d')
+        except (ValueError, TypeError):
+            continue
+        month_key = due.strftime('%Y-%m')
+        month_label = due.strftime('%B %Y')
+        
+        if month_key not in months:
+            months[month_key] = {
+                'label': month_label,
+                'month_key': month_key,
+                'periods': {},
+                'total': 0
+            }
+        
+        # Find pay period
+        period_found = False
+        for pp in pay_periods:
+            if pp['start'] <= bill['due_date'] <= pp['end']:
+                p_label = pp['label']
+                if p_label not in months[month_key]['periods']:
+                    months[month_key]['periods'][p_label] = {
+                        'label': p_label,
+                        'start': pp['start'],
+                        'end': pp['end'],
+                        'bills': [],
+                        'total': 0
+                    }
+                months[month_key]['periods'][p_label]['bills'].append(bill)
+                months[month_key]['periods'][p_label]['total'] += bill.get('amount', 0)
+                months[month_key]['total'] += bill.get('amount', 0)
+                period_found = True
+                break
+        
+        if not period_found:
+            p_label = 'Other'
+            if p_label not in months[month_key]['periods']:
+                months[month_key]['periods'][p_label] = {
+                    'label': p_label,
+                    'bills': [],
+                    'total': 0
+                }
+            months[month_key]['periods'][p_label]['bills'].append(bill)
+            months[month_key]['periods'][p_label]['total'] += bill.get('amount', 0)
+            months[month_key]['total'] += bill.get('amount', 0)
+    
+    # Sort months chronologically
+    sorted_months = sorted(months.values(), key=lambda m: m['month_key'])
+    
+    # Sort periods within each month by start date
+    for month in sorted_months:
+        periods_list = sorted(month['periods'].values(), key=lambda p: p.get('start', ''))
+        month['periods_list'] = periods_list
+        month['period_count'] = len(periods_list)
+    
     payees = db.get_all_payees()
-    categories = db.get_budget_categories()
-    return render_template('bills.html', bills=bills, payees=payees, categories=categories, filter_type=filter_type)
+    return render_template('bills.html', bills=bills, grouped_months=sorted_months, payees=payees, filter_type=filter_type, pay_periods=pay_periods)
 
 @app.route('/add_bill')
 def add_bill_form():
     payees = db.get_all_payees()
-    categories = db.get_budget_categories()
-    return render_template('add_bill.html', payees=payees, categories=categories)
+    return render_template('add_bill.html', payees=payees)
 
 @app.route('/add_bill', methods=['POST'])
 def add_bill():
@@ -655,7 +764,24 @@ def update_bill(id):
     flash('Bill updated successfully!', 'success')
     return redirect(url_for('bills'))
 
-@app.route('/mark_bill_paid/<int:id>')
+@app.route('/update_bill_ajax/<int:id>', methods=['POST'])
+@app.route('/update_bill_ajax/<int:id>', methods=['POST'])
+def update_bill_ajax(id):
+    try:
+        data = request.form
+        if 'amount' in data:
+            amount_str = data['amount'].strip()
+            amount = float(amount_str) if amount_str else 0.0
+            db.update_bill_field(id, 'amount', amount)
+        if 'due_date' in data:
+            db.update_bill_field(id, 'due_date', data['due_date'])
+        if 'account' in data:
+            db.update_bill_field(id, 'account', data['account'])
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/mark_bill_paid/<int:id>', methods=['GET', 'POST'])
 def mark_bill_paid(id):
     conn = db.get_db()
     cursor = conn.cursor()
@@ -674,13 +800,13 @@ def mark_bill_paid(id):
             old_due = datetime.strptime(old_due_date, '%Y-%m-%d')
             today = datetime.now()
             
-            # Compute next due date - keep adding recurrence until we get a date >= today
             new_due = old_due
-            while new_due < today:
+            advanced = False
+            while True:
                 if recurrence_type == 'weekly':
-                    new_due = new_due + timedelta(weeks=1)
+                    new_due += timedelta(weeks=1)
                 elif recurrence_type == 'biweekly':
-                    new_due = new_due + timedelta(weeks=2)
+                    new_due += timedelta(weeks=2)
                 elif recurrence_type == 'monthly':
                     new_due = add_months(new_due, 1)
                 elif recurrence_type == 'quarterly':
@@ -691,16 +817,24 @@ def mark_bill_paid(id):
                     else:
                         new_due = add_months(new_due, 1)
                         new_due = new_due.replace(day=1)
+                elif recurrence_type == 'yearly':
+                    new_due = add_months(new_due, 12)
                 else:
                     break
+                advanced = True
+                if new_due > today:
+                    break
             
-            # Reset to unpaid with new due date
-            cursor.execute('UPDATE bills SET is_paid=0, paid_date=NULL, due_date=? WHERE id=?',
-                        (new_due.strftime('%Y-%m-%d'), id))
-            flash(f'Bill marked as paid. Next due: {new_due.strftime("%m/%d/%Y")}', 'success')
+            if advanced:
+                cursor.execute('UPDATE bills SET is_paid=0, paid_date=NULL, due_date=? WHERE id=?',
+                            (new_due.strftime('%Y-%m-%d'), id))
+                flash(f'Bill marked as paid. Next due: {new_due.strftime("%m/%d/%Y")}', 'success')
+            else:
+                cursor.execute('UPDATE bills SET is_paid=1, paid_date=? WHERE id=?',
+                            (datetime.now().strftime('%Y-%m-%d'), id))
+                flash('Bill marked as paid!', 'success')
         except Exception as e:
             flash(f'Error updating recurring bill: {e}', 'danger')
-            # Still mark as paid for this period
             cursor.execute('UPDATE bills SET is_paid=1, paid_date=? WHERE id=?',
                         (datetime.now().strftime('%Y-%m-%d'), id))
     else:
@@ -735,7 +869,8 @@ def categories():
     payees = db.get_all_payees()
     payee_categories = list(set(p['category'] for p in payees if p.get('category')))
     budget_categories = db.get_budget_categories()
-    return render_template('categories.html', payee_categories=payee_categories, budget_categories=budget_categories)
+    all_categories_flat = db.get_all_budget_categories_flat()
+    return render_template('categories.html', payee_categories=payee_categories, budget_categories=budget_categories, all_categories_flat=all_categories_flat)
 
 @app.route('/add_payee_category', methods=['POST'])
 def add_payee_category():
@@ -752,6 +887,28 @@ def delete_payee_category():
         db.delete_payee_category_by_name(category)
     flash('Category deleted.', 'info')
     return redirect(url_for('categories'))
+
+@app.route('/rename_payee_category', methods=['POST'])
+def rename_payee_category():
+    old_name = request.form.get('old_name', '').strip()
+    new_name = request.form.get('new_name', '').strip()
+    if old_name and new_name and old_name != new_name:
+        db.rename_payee_category(old_name, new_name)
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Invalid names'}), 400
+
+@app.route('/update_budget_category_name/<int:id>', methods=['POST'])
+def update_budget_category_name(id):
+    name = request.form.get('name', '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Name is required'}), 400
+    category = db.get_budget_category(id)
+    if not category:
+        return jsonify({'success': False, 'error': 'Category not found'}), 404
+    db.update_budget_category(id, name, category['monthly_limit'], category['color'],
+                              category.get('due_date', ''), category.get('notes', ''),
+                              category.get('actual_spent'), category.get('parent_id'))
+    return jsonify({'success': True})
 
 @app.route('/add_payee')
 def add_payee_form():
@@ -1039,19 +1196,22 @@ def add_bank_account_form():
 
 @app.route('/add_bank_account', methods=['POST'])
 def add_bank_account():
+    is_income = 1 if request.form.get('is_income_account') else 0
     db.add_bank_account(
         request.form['name'],
         request.form['account_type'],
         request.form.get('institution', ''),
         request.form.get('account_number_last4', ''),
         float(request.form['current_balance']),
-        request.form.get('website', '')
+        request.form.get('website', ''),
+        is_income
     )
     flash('Bank account added successfully!', 'success')
     return redirect(url_for('bank_accounts'))
 
 @app.route('/update_bank_account/<int:id>', methods=['POST'])
 def update_bank_account(id):
+    is_income = 1 if request.form.get('is_income_account') else 0
     db.update_bank_account(
         id,
         request.form['name'],
@@ -1059,7 +1219,8 @@ def update_bank_account(id):
         request.form.get('institution', ''),
         request.form.get('account_number_last4', ''),
         float(request.form['current_balance']),
-        request.form.get('website', '')
+        request.form.get('website', ''),
+        is_income
     )
     flash('Bank account updated successfully!', 'success')
     return redirect(url_for('bank_accounts'))
@@ -1189,7 +1350,7 @@ def delete_credit_card(id):
 
 @app.route('/budget')
 def budget():
-    categories = db.get_budget_categories()
+    hierarchical, categories = get_hierarchical_and_flat()
     all_bills = db.get_bills_with_payees()
     
     bills_by_category = {}
@@ -1204,7 +1365,8 @@ def budget():
     
     total_budget = sum(cat['monthly_limit'] for cat in categories)
     return render_template('budget.html', 
-                        categories=categories, 
+                        categories=categories,
+                        hierarchical_categories=hierarchical,
                         bills_by_category=bills_by_category,
                         all_bills=all_bills,
                         total_actual=total_actual,
@@ -1212,17 +1374,20 @@ def budget():
 
 @app.route('/add_budget_category')
 def add_budget_category_form():
-    return render_template('add_budget_category.html')
+    parent_categories = db.get_all_budget_categories_flat()
+    return render_template('add_budget_category.html', parent_categories=parent_categories)
 
 @app.route('/add_budget_category', methods=['POST'])
 def add_budget_category():
+    parent_id = request.form.get('parent_id')
     db.add_budget_category(
         request.form['name'],
         float(request.form['monthly_limit']),
         request.form.get('color', '#2E7D32'),
         request.form.get('due_date', ''),
         request.form.get('notes', ''),
-        float(request.form.get('actual_spent') or 0)
+        float(request.form.get('actual_spent') or 0),
+        int(parent_id) if parent_id else None
     )
     flash('Budget category added successfully!', 'success')
     return redirect(url_for('budget'))
@@ -1230,6 +1395,7 @@ def add_budget_category():
 @app.route('/update_budget_category/<int:id>', methods=['POST'])
 def update_budget_category(id):
     actual = request.form.get('actual_spent')
+    parent_id = request.form.get('parent_id')
     db.update_budget_category(
         id,
         request.form['name'],
@@ -1237,7 +1403,8 @@ def update_budget_category(id):
         request.form.get('color', '#2E7D32'),
         request.form.get('due_date', ''),
         request.form.get('notes', ''),
-        float(actual) if actual else None
+        float(actual) if actual else None,
+        int(parent_id) if parent_id else None
     )
     flash('Budget category updated successfully!', 'success')
     return redirect(url_for('budget'))

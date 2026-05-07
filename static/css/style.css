@@ -1,7 +1,7 @@
 :root {
     --primary: #00D9A5;
     --primary-dark: #00B88A;
-    --primary-light: #E8FFF5;
+    --primary-light: #489b77;
     --bg-main: #010e21;
     --bg-card: #09182f;
     --bg-card-hover: #1F1F23;
@@ -28,6 +28,11 @@ body {
     margin: 0;
     padding: 0;
     overscroll-behavior: contain;
+}
+
+body, .text-dark, .text-body, p, span, div, h1, h2, h3, h4, h5, h6, label, td, th, li, a:not(.btn):not(.text-success):not(.text-danger):not(.text-warning):not(.text-primary) {
+    color: #fdfeff !important;
+}
     min-height: 100vh;
 }
 
@@ -442,6 +447,33 @@ body:has(.sidebar.collapsed) .main-content {
 .net-worth .stat-icon {
     background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
     color: #fff;
+}
+
+.income-card .stat-icon {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: #fff;
+}
+
+.expense-card .stat-icon {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    color: #fff;
+}
+
+.remaining-card .stat-icon {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    color: #fff;
+}
+
+.income-amount {
+    color: #10B981;
+}
+
+.expense-amount {
+    color: #EF4444;
+}
+
+.remaining-amount {
+    color: #3B82F6;
 }
 
 .stat-info h3 {

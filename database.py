@@ -31,7 +31,8 @@ def init_db():
             account_number_last4 TEXT,
             current_balance REAL DEFAULT 0,
             website TEXT,
-            is_active INTEGER DEFAULT 1
+            is_active INTEGER DEFAULT 1,
+            is_income_account INTEGER DEFAULT 0
         );
         
         CREATE TABLE IF NOT EXISTS credit_cards (
@@ -129,7 +130,9 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             monthly_limit REAL DEFAULT 0,
-            color TEXT DEFAULT '#2E7D32'
+            color TEXT DEFAULT '#2E7D32',
+            parent_id INTEGER DEFAULT NULL,
+            FOREIGN KEY (parent_id) REFERENCES budget_categories(id)
         );
     ''')
     
@@ -217,6 +220,15 @@ def init_db():
         except:
             pass
     
+    # Add parent_id to budget_categories if not exists
+    cursor.execute("PRAGMA table_info(budget_categories)")
+    budget_cats_cols = [col[1] for col in cursor.fetchall()]
+    if 'parent_id' not in budget_cats_cols:
+        try:
+            cursor.execute('ALTER TABLE budget_categories ADD COLUMN parent_id INTEGER DEFAULT NULL REFERENCES budget_categories(id)')
+        except:
+            pass
+    
     conn.commit()
     conn.close()
 
@@ -263,6 +275,13 @@ def delete_payee_category_by_name(category_name):
     conn.commit()
     conn.close()
 
+def rename_payee_category(old_name, new_name):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE payees SET category = ? WHERE category = ?', (new_name, old_name))
+    conn.commit()
+    conn.close()
+
 def get_all_bank_accounts():
     conn = get_db()
     cursor = conn.cursor()
@@ -279,19 +298,19 @@ def get_bank_account(id):
     conn.close()
     return dict(account) if account else None
 
-def add_bank_account(name, account_type, institution, account_number_last4, current_balance, website=''):
+def add_bank_account(name, account_type, institution, account_number_last4, current_balance, website='', is_income_account=0):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO bank_accounts (name, account_type, institution, account_number_last4, current_balance, website) VALUES (?, ?, ?, ?, ?, ?)',
-                   (name, account_type, institution, account_number_last4, current_balance, website))
+    cursor.execute('INSERT INTO bank_accounts (name, account_type, institution, account_number_last4, current_balance, website, is_income_account) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (name, account_type, institution, account_number_last4, current_balance, website, is_income_account))
     conn.commit()
     conn.close()
 
-def update_bank_account(id, name, account_type, institution, account_number_last4, current_balance, website=''):
+def update_bank_account(id, name, account_type, institution, account_number_last4, current_balance, website='', is_income_account=0):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE bank_accounts SET name=?, account_type=?, institution=?, account_number_last4=?, current_balance=?, website=? WHERE id=?',
-                   (name, account_type, institution, account_number_last4, current_balance, website, id))
+    cursor.execute('UPDATE bank_accounts SET name=?, account_type=?, institution=?, account_number_last4=?, current_balance=?, website=?, is_income_account=? WHERE id=?',
+                   (name, account_type, institution, account_number_last4, current_balance, website, is_income_account, id))
     conn.commit()
     conn.close()
 
@@ -488,6 +507,13 @@ def update_bill(id, payee_id, amount, due_date, is_recurring, recurrence_type, n
     conn.commit()
     conn.close()
 
+def update_bill_field(id, field, value):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(f'UPDATE bills SET {field}=? WHERE id=?', (value, id))
+    conn.commit()
+    conn.close()
+
 def mark_bill_paid(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -512,10 +538,54 @@ def delete_bill(id):
 def get_budget_categories():
     conn = get_db()
     cursor = conn.cursor()
+    cursor.execute('SELECT * FROM budget_categories ORDER BY parent_id IS NOT NULL, parent_id, name')
+    categories = cursor.fetchall()
+    conn.close()
+    cats = [dict(row) for row in categories]
+    # Build hierarchy: parent categories first, children nested
+    parents = [c for c in cats if not c['parent_id']]
+    children = [c for c in cats if c['parent_id']]
+    for parent in parents:
+        parent['children'] = [c for c in children if c['parent_id'] == parent['id']]
+    return parents
+
+def get_budget_category(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM budget_categories WHERE id=?', (id,))
+    cat = cursor.fetchone()
+    conn.close()
+    return dict(cat) if cat else None
+
+def get_all_budget_categories_flat():
+    conn = get_db()
+    cursor = conn.cursor()
     cursor.execute('SELECT * FROM budget_categories ORDER BY name')
     categories = cursor.fetchall()
     conn.close()
     return [dict(row) for row in categories]
+
+def add_budget_category(name, monthly_limit, color, due_date='', notes='', actual_spent=0, parent_id=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO budget_categories (name, monthly_limit, color, due_date, notes, actual_spent, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (name, monthly_limit, color, due_date, notes, actual_spent, parent_id))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return new_id
+
+def update_budget_category(id, name, monthly_limit, color, due_date='', notes='', actual_spent=None, parent_id=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if actual_spent is not None:
+        cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=?, due_date=?, notes=?, actual_spent=?, parent_id=? WHERE id=?',
+                       (name, monthly_limit, color, due_date, notes, actual_spent, parent_id, id))
+    else:
+        cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=?, due_date=?, notes=?, parent_id=? WHERE id=?',
+                       (name, monthly_limit, color, due_date, notes, parent_id, id))
+    conn.commit()
+    conn.close()
 
 def get_category_spending_this_month(category_id):
     conn = get_db()
@@ -557,26 +627,6 @@ def get_category_projected_this_month(category_id):
     conn.close()
     return result['projected'] if result else 0
 
-def add_budget_category(name, monthly_limit, color, due_date='', notes='', actual_spent=0):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO budget_categories (name, monthly_limit, color, due_date, notes, actual_spent) VALUES (?, ?, ?, ?, ?, ?)',
-                   (name, monthly_limit, color, due_date, notes, actual_spent))
-    conn.commit()
-    conn.close()
-
-def update_budget_category(id, name, monthly_limit, color, due_date='', notes='', actual_spent=None):
-    conn = get_db()
-    cursor = conn.cursor()
-    if actual_spent is not None:
-        cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=?, due_date=?, notes=?, actual_spent=? WHERE id=?',
-                       (name, monthly_limit, color, due_date, notes, actual_spent, id))
-    else:
-        cursor.execute('UPDATE budget_categories SET name=?, monthly_limit=?, color=?, due_date=?, notes=? WHERE id=?',
-                       (name, monthly_limit, color, due_date, notes, id))
-    conn.commit()
-    conn.close()
-
 def delete_budget_category(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -594,6 +644,44 @@ def get_dashboard_stats():
     cursor.execute('SELECT SUM(current_balance) as total FROM credit_cards WHERE is_active=1')
     total_credit = cursor.fetchone()[0] or 0
     
+    # Income = sum of current_balance from accounts marked as income accounts
+    cursor.execute('SELECT SUM(current_balance) as total FROM bank_accounts WHERE is_active=1 AND is_income_account=1')
+    total_income_accounts = cursor.fetchone()[0] or 0
+    
+    # Income from last paycheck net_pay
+    cursor.execute('SELECT net_pay FROM paychecks ORDER BY check_date DESC LIMIT 1')
+    row = cursor.fetchone()
+    last_paycheck_net = row[0] if row and row[0] else 0
+    
+    total_income = total_income_accounts + last_paycheck_net
+    
+    # Expense = sum of all paid bills amounts
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) as total FROM bills WHERE is_paid=1')
+    total_expenses_paid = cursor.fetchone()[0] or 0
+    
+    # Bills due before next paycheck (2 weeks from now)
+    next_paycheck = get_next_paycheck_date()
+    bills_before_next_pay = []
+    bills_before_next_pay_total = 0
+    
+    if next_paycheck:
+        cursor.execute('''
+            SELECT bills.*, payees.name as payee_name 
+            FROM bills 
+            LEFT JOIN payees ON bills.payee_id = payees.id 
+            WHERE bills.is_paid = 0 AND bills.due_date <= ?
+            ORDER BY bills.due_date ASC
+        ''', (next_paycheck,))
+        bills_before_next_pay = [dict(row) for row in cursor.fetchall()]
+        bills_before_next_pay_total = sum(bill['amount'] for bill in bills_before_next_pay)
+    
+    # Total expenses = paid bills + unpaid bills due before next paycheck
+    total_expenses = total_expenses_paid + bills_before_next_pay_total
+    
+    # Remaining = Income - Expenses
+    remaining = total_income - total_expenses
+    
+    # Upcoming bills (next 5 unpaid bills)
     cursor.execute('''
         SELECT bills.*, payees.name as payee_name 
         FROM bills 
@@ -602,25 +690,6 @@ def get_dashboard_stats():
         ORDER BY bills.due_date ASC LIMIT 5
     ''')
     upcoming_bills = [dict(row) for row in cursor.fetchall()]
-    
-    # Add credit cards with due dates as bills
-    cursor.execute('''
-        SELECT id, name, due_date, current_balance as amount, 'Credit Card' as payee_name
-        FROM credit_cards 
-        WHERE is_active=1 AND due_date IS NOT NULL AND due_date != ''
-        ORDER BY due_date ASC
-    ''')
-    for row in cursor.fetchall():
-        card = dict(row)
-        card['is_paid'] = 0
-        card['is_recurring'] = 0
-        card['recurrence_type'] = None
-        card['notes'] = 'Credit Card Payment'
-        upcoming_bills.append(card)
-    
-    # Sort all upcoming by due date
-    upcoming_bills.sort(key=lambda x: x['due_date'])
-    upcoming_bills = upcoming_bills[:5]
     
     cursor.execute('SELECT * FROM paychecks ORDER BY check_date DESC LIMIT 1')
     row = cursor.fetchone()
@@ -631,6 +700,15 @@ def get_dashboard_stats():
     return {
         'total_bank': total_bank,
         'total_credit': total_credit,
+        'total_income': total_income,
+        'total_income_accounts': total_income_accounts,
+        'last_paycheck_net': last_paycheck_net,
+        'total_expenses': total_expenses,
+        'total_expenses_paid': total_expenses_paid,
+        'bills_before_next_pay': bills_before_next_pay,
+        'bills_before_next_pay_total': bills_before_next_pay_total,
+        'next_paycheck_date': next_paycheck,
+        'remaining': remaining,
         'upcoming_bills': upcoming_bills,
         'last_paycheck': last_paycheck
     }

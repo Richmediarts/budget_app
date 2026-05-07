@@ -17,6 +17,16 @@
                         <input type="text" name="name" class="form-control" required placeholder="e.g., Groceries">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Parent Category (optional)</label>
+                        <select name="parent_id" class="form-select">
+                            <option value="">-- None (Top-level Category) --</option>
+                            {% for parent in parent_categories %}
+                                <option value="{{ parent.id }}">{{ parent.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Select a parent to make this a sub-category</small>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Monthly Limit</label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>

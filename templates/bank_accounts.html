@@ -141,6 +141,10 @@
                         <label class="form-label">Website (Optional)</label>
                         <input type="url" name="website" id="editAccountWebsite" class="form-control" placeholder="https://...">
                     </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" name="is_income_account" id="editAccountIsIncome">
+                        <label class="form-check-label" for="editAccountIsIncome">This is an income account</label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -162,6 +166,7 @@ function editAccount(id) {
             document.getElementById('editAccountLast4').value = data.account_number_last4 || '';
             document.getElementById('editAccountBalance').value = data.current_balance || 0;
             document.getElementById('editAccountWebsite').value = data.website || '';
+            document.getElementById('editAccountIsIncome').checked = data.is_income_account == 1;
             document.getElementById('editAccountForm').action = `/update_bank_account/${id}`;
             new bootstrap.Modal(document.getElementById('editAccountModal')).show();
         });

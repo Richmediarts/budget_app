@@ -41,17 +41,59 @@
 </div>
 
 <div class="row g-3 mt-2">
+    <div class="col-sm-6 col-lg-4">
+        <a href="{{ url_for('paychecks') }}" class="text-decoration-none">
+            <div class="stat-card income-card h-100">
+                <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+                <div class="stat-info">
+                    <h3>Income</h3>
+                    <h2 class="amount income-amount">${{ "%.2f"|format(stats.total_income) }}</h2>
+                    <small class="text-muted">${{ "%.2f"|format(stats.total_income_accounts) }} accounts + ${{ "%.2f"|format(stats.last_paycheck_net) }} paycheck</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <a href="{{ url_for('bills') }}" class="text-decoration-none">
+            <div class="stat-card expense-card h-100">
+                <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+                <div class="stat-info">
+                    <h3>Expenses</h3>
+                    <h2 class="amount expense-amount">${{ "%.2f"|format(stats.total_expenses) }}</h2>
+                    <small class="text-muted">${{ "%.2f"|format(stats.total_expenses_paid) }} paid + ${{ "%.2f"|format(stats.bills_before_next_pay_total) }} upcoming</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-12 col-lg-4">
+        <div class="stat-card remaining-card h-100">
+            <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
+            <div class="stat-info">
+                <h3>Remaining</h3>
+                <h2 class="amount {% if stats.remaining < 0 %}text-danger{% else %}remaining-amount{% endif %}">
+                    ${{ "%.2f"|format(stats.remaining) }}
+                </h2>
+                <small class="text-muted">Next paycheck: {{ stats.next_paycheck_date or 'Not set' }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-2">
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header">
                 <a href="{{ url_for('bills') }}" class="text-decoration-none text-white">
-                    <h5><i class="bi bi-receipt"></i> Upcoming Bills</h5>
+                    <h5><i class="bi bi-receipt"></i> Bills Due Before Next Paycheck</h5>
                 </a>
             </div>
             <div class="card-body">
-                {% if stats.upcoming_bills %}
+                {% if stats.next_paycheck_date %}
+                    <p class="text-muted mb-2">Next paycheck: {{ stats.next_paycheck_date }}</p>
+                {% endif %}
+                {% if stats.bills_before_next_pay %}
                     <div class="list-group">
-                        {% for bill in stats.upcoming_bills %}
+                        {% for bill in stats.bills_before_next_pay %}
                             {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d') %}
                             {% set today = datetime.now() %}
                             {% set days_until = (due_date - today).days %}
@@ -75,8 +117,11 @@
                             </a>
                         {% endfor %}
                     </div>
+                    <div class="mt-3 pt-3 border-top">
+                        <strong>Total: ${{ "%.2f"|format(stats.bills_before_next_pay_total) }}</strong>
+                    </div>
                 {% else %}
-                    <p class="text-muted">No upcoming bills.</p>
+                    <p class="text-muted">No bills due before next paycheck.</p>
                 {% endif %}
                 <a href="{{ url_for('bills') }}" class="btn btn-primary mt-3 w-100">View All Bills</a>
             </div>
@@ -84,49 +129,40 @@
     </div>
     
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header">
-                <h5><i class="bi bi-cash-stack"></i> Last Paycheck</h5>
+                <h5><i class="bi bi-calendar-check"></i> Last Paycheck</h5>
             </div>
             <div class="card-body">
                 {% if stats.last_paycheck %}
                     <div class="paycheck-summary">
-                        <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
-                            <span class="text-muted">Pay Date:</span>
-                            <strong>{{ stats.last_paycheck.pay_date }}</strong>
+                        <div class="mb-2">
+                            <small class="text-muted">Pay Date:</small>
+                            <div><strong>{{ stats.last_paycheck.pay_date }}</strong></div>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Gross Pay:</span>
-                            <span>${{ "%.2f"|format(stats.last_paycheck.gross_pay) }}</span>
+                        <div class="mb-2">
+                            <small class="text-muted">Gross Pay:</small>
+                            <div>${{ "%.2f"|format(stats.last_paycheck.gross_pay) }}</div>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Total Deductions:</span>
-                            <span class="text-danger">-${{ "%.2f"|format(stats.last_paycheck.gross_pay - stats.last_paycheck.net_pay) }}</span>
+                        <div class="mb-2">
+                            <small class="text-muted">Total Deductions:</small>
+                            <div class="text-danger">-${{ "%.2f"|format(stats.last_paycheck.gross_pay - stats.last_paycheck.net_pay) }}</div>
                         </div>
-                        <hr class="my-3" style="opacity: 0.2;">
-                        <div class="d-flex justify-content-between">
-                            <strong>Net Pay:</strong>
-                            <strong class="text-success fs-5">${{ "%.2f"|format(stats.last_paycheck.net_pay) }}</strong>
+                        <div class="mb-2">
+                            <small class="text-muted">Net Pay:</small>
+                            <div class="text-success fw-bold fs-5">${{ "%.2f"|format(stats.last_paycheck.net_pay) }}</div>
                         </div>
+
+                        {% if stats.next_paycheck_date %}
+                            <hr class="my-3" style="opacity: 0.2;">
+                            <small class="text-muted">Next estimated paycheck:</small>
+                            <div class="text-success fw-bold">{{ stats.next_paycheck_date }}</div>
+                        {% endif %}
                     </div>
                 {% else %}
-                    <p class="text-muted">No paychecks recorded yet.</p>
+                    <p class="text-muted">No paycheck data. <a href="{{ url_for('paychecks') }}">Add a paycheck</a></p>
                 {% endif %}
                 <a href="{{ url_for('paychecks') }}" class="btn btn-primary mt-3 w-100">View Paychecks</a>
-            </div>
-        </div>
-        
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5><i class="bi bi-calendar-event"></i> Next Paycheck</h5>
-            </div>
-            <div class="card-body">
-                {% if next_paycheck_date %}
-                    <p class="mb-1 text-muted">Estimated next biweekly paycheck:</p>
-                    <h4 class="text-success">{{ next_paycheck_date }}</h4>
-                {% else %}
-                    <p class="text-muted">Add a paycheck to see the schedule.</p>
-                {% endif %}
             </div>
         </div>
     </div>
