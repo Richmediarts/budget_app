@@ -10,8 +10,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="shortcut icon" href="/static/images/favicon.ico">
 </head>
 <body>
+    {% if session.user_id %}
     <nav class="mobile-nav d-md-none">
         <a href="{{ url_for('dashboard') }}" class="mobile-nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
             <i class="bi bi-speedometer2"></i>
@@ -37,7 +40,7 @@
     
     <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="mobileSidebar">
         <div class="offcanvas-header">
-            <h5 class="offcanvas-title">RETTEEE BUDGET</h5>
+            <h5 class="offcanvas-title"><img src="/static/images/web-app-manifest-192x192.png" alt="" style="height: 28px; width: 28px; margin-right: 8px; vertical-align: middle;">RETTEEE BUDGET</h5>
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body">
@@ -72,13 +75,23 @@
                 <a href="{{ url_for('budget') }}" class="nav-item {% if request.endpoint == 'budget' %}active{% endif %}">
                     <i class="bi bi-pie-chart"></i> Budget
                 </a>
+                <a href="{{ url_for('reports') }}" class="nav-item {% if request.endpoint == 'reports' %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i> Reports
+                </a>
+                <a href="{{ url_for('modified_income') }}" class="nav-item {% if request.endpoint == 'modified_income' %}active{% endif %}">
+                    <i class="bi bi-pencil-square"></i> Modified Income
+                </a>
+                <hr>
+                <a href="{{ url_for('logout') }}" class="nav-item text-danger">
+                    <i class="bi bi-box-arrow-left"></i> Logout
+                </a>
             </nav>
         </div>
     </div>
     
 <div class="sidebar d-none d-md-block" id="sidebar">
         <div class="sidebar-header">
-            <h4>RETTEEE BUDGET</h4>
+            <h4><img src="/static/images/web-app-manifest-192x192.png" alt="" style="height: 28px; width: 28px; vertical-align: middle;"><span class="brand-text" style="margin-left: 8px;">RETTEEE BUDGET</span></h4>
             <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
                 <i class="bi bi-chevron-left"></i>
             </button>
@@ -114,8 +127,19 @@
             <a href="{{ url_for('budget') }}" class="nav-item {% if request.endpoint == 'budget' %}active{% endif %}">
                 <i class="bi bi-pie-chart"></i> <span>Budget</span>
             </a>
+            <a href="{{ url_for('reports') }}" class="nav-item {% if request.endpoint == 'reports' %}active{% endif %}">
+                <i class="bi bi-bar-chart"></i> <span>Reports</span>
+            </a>
+            <a href="{{ url_for('modified_income') }}" class="nav-item {% if request.endpoint == 'modified_income' %}active{% endif %}">
+                <i class="bi bi-pencil-square"></i> <span>Modified Income</span>
+            </a>
+            <hr>
+            <a href="{{ url_for('logout') }}" class="nav-item text-danger">
+                <i class="bi bi-box-arrow-left"></i> <span>Logout</span>
+            </a>
         </nav>
     </div>
+    {% endif %}
     
     <div class="main-content">
         <div class="top-header d-none d-md-block">

@@ -134,6 +134,21 @@ def init_db():
             parent_id INTEGER DEFAULT NULL,
             FOREIGN KEY (parent_id) REFERENCES budget_categories(id)
         );
+        
+        CREATE TABLE IF NOT EXISTS modified_income (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            amount REAL NOT NULL DEFAULT 0,
+            entry_date TEXT NOT NULL,
+            period_type TEXT NOT NULL DEFAULT 'biweekly',
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        );
     ''')
     
     cursor.execute("PRAGMA table_info(paychecks)")
@@ -229,6 +244,14 @@ def init_db():
         except:
             pass
     
+    cursor.execute("PRAGMA table_info(budget_categories)")
+    cols = [col[1] for col in cursor.fetchall()]
+    if 'sort_order' not in cols:
+        try:
+            cursor.execute('ALTER TABLE budget_categories ADD COLUMN sort_order INTEGER DEFAULT 0')
+        except:
+            pass
+    
     conn.commit()
     conn.close()
 
@@ -318,6 +341,21 @@ def delete_bank_account(id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('UPDATE bank_accounts SET is_active=0 WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+
+def update_bank_account_balance(id, balance):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE bank_accounts SET current_balance=? WHERE id=?', (balance, id))
+    conn.commit()
+    conn.close()
+
+def add_transaction(account_id, date, description, amount, balance=0):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO transactions (account_id, date, description, amount, balance) VALUES (?, ?, ?, ?, ?)',
+                   (account_id, date, description, amount, balance))
     conn.commit()
     conn.close()
 
@@ -538,7 +576,7 @@ def delete_bill(id):
 def get_budget_categories():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM budget_categories ORDER BY parent_id IS NOT NULL, parent_id, name')
+    cursor.execute('SELECT * FROM budget_categories ORDER BY sort_order, parent_id IS NOT NULL, parent_id, name')
     categories = cursor.fetchall()
     conn.close()
     cats = [dict(row) for row in categories]
@@ -560,7 +598,7 @@ def get_budget_category(id):
 def get_all_budget_categories_flat():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM budget_categories ORDER BY name')
+    cursor.execute('SELECT * FROM budget_categories ORDER BY sort_order, name')
     categories = cursor.fetchall()
     conn.close()
     return [dict(row) for row in categories]
@@ -655,14 +693,27 @@ def get_dashboard_stats():
     
     total_income = total_income_accounts + last_paycheck_net
     
-    # Expense = sum of all paid bills amounts
-    cursor.execute('SELECT COALESCE(SUM(amount), 0) as total FROM bills WHERE is_paid=1')
-    total_expenses_paid = cursor.fetchone()[0] or 0
+    # Get current pay period income (last paycheck net)
+    cursor.execute('SELECT check_date, pay_period_begin, pay_period_end, net_pay, gross_pay FROM paychecks ORDER BY check_date DESC LIMIT 1')
+    row = cursor.fetchone()
+    current_period_income = dict(row) if row else None
     
-    # Bills due before next paycheck (2 weeks from now)
+    # Expense = paid bills + unpaid bills due before next paycheck
+    # Paid bills are limited to the current pay period (last paycheck → next paycheck)
+    cursor.execute('SELECT check_date FROM paychecks ORDER BY check_date DESC LIMIT 1')
+    row = cursor.fetchone()
+    last_paycheck_date = row[0] if row else None
+    
     next_paycheck = get_next_paycheck_date()
     bills_before_next_pay = []
     bills_before_next_pay_total = 0
+    
+    if next_paycheck and last_paycheck_date:
+        cursor.execute('SELECT COALESCE(SUM(amount), 0) as total FROM bills WHERE is_paid=1 AND paid_date >= ? AND paid_date <= ?',
+                       (last_paycheck_date, next_paycheck))
+    else:
+        cursor.execute('SELECT COALESCE(SUM(amount), 0) as total FROM bills WHERE is_paid=1')
+    total_expenses_paid = cursor.fetchone()[0] or 0
     
     if next_paycheck:
         cursor.execute('''
@@ -680,6 +731,28 @@ def get_dashboard_stats():
     
     # Remaining = Income - Expenses
     remaining = total_income - total_expenses
+    
+    # === Biweekly breakdown (uses pay period) ===
+    biweekly_income = last_paycheck_net
+    
+    # === Monthly breakdown (30-day rolling window) ===
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    thirty_days_from_now = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    # Monthly income: annualize last paycheck net / 12 (26 pay periods per year)
+    monthly_income = last_paycheck_net * 26 / 12 if last_paycheck_net else 0
+    
+    # Use budget category limits for expense figures
+    cursor.execute('SELECT COALESCE(SUM(monthly_limit), 0) FROM budget_categories')
+    total_budget = cursor.fetchone()[0]
+    
+    monthly_expenses = total_budget
+    monthly_expenses_paid = 0
+    monthly_expenses_due = 0
+    monthly_remaining = monthly_income - monthly_expenses
+    
+    biweekly_expenses = total_budget / 2 if total_budget else 0
+    biweekly_remaining = biweekly_income - biweekly_expenses
     
     # Upcoming bills (next 5 unpaid bills)
     cursor.execute('''
@@ -710,7 +783,17 @@ def get_dashboard_stats():
         'next_paycheck_date': next_paycheck,
         'remaining': remaining,
         'upcoming_bills': upcoming_bills,
-        'last_paycheck': last_paycheck
+        'last_paycheck': last_paycheck,
+        'last_paycheck_date': last_paycheck_date,
+        'current_period_income': current_period_income,
+        'biweekly_income': biweekly_income,
+        'biweekly_expenses': biweekly_expenses,
+        'biweekly_remaining': biweekly_remaining,
+        'monthly_income': monthly_income,
+        'monthly_expenses': monthly_expenses,
+        'monthly_expenses_paid': monthly_expenses_paid,
+        'monthly_expenses_due': monthly_expenses_due,
+        'monthly_remaining': monthly_remaining
     }
 
 def get_next_paycheck_date():
@@ -810,3 +893,160 @@ def delete_transaction(id):
     cursor.execute('DELETE FROM transactions WHERE id = ?', (id,))
     conn.commit()
     conn.close()
+
+def get_pay_period_history():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT check_date, pay_period_begin, pay_period_end, net_pay, gross_pay FROM paychecks ORDER BY check_date ASC')
+    paychecks = [dict(r) for r in cursor.fetchall()]
+
+    periods = []
+    for pc in paychecks:
+        start = pc.get('pay_period_begin')
+        end = pc.get('pay_period_end')
+        check_date = pc.get('check_date', '')
+        if not start or not end:
+            continue
+
+        cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=1 AND paid_date >= ? AND paid_date <= ?',
+                       (start, end))
+        period_paid = cursor.fetchone()[0] or 0
+
+        periods.append({
+            'start': start,
+            'end': end,
+            'check_date': check_date,
+            'income_net': pc.get('net_pay', 0),
+            'income_gross': pc.get('gross_pay', 0),
+            'expenses_paid': period_paid,
+            'net': pc.get('net_pay', 0) - period_paid
+        })
+
+    conn.close()
+    return periods
+
+def add_modified_income(amount, entry_date, period_type='biweekly', notes=''):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO modified_income (amount, entry_date, period_type, notes) VALUES (?, ?, ?, ?)',
+                   (amount, entry_date, period_type, notes))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return new_id
+
+def get_modified_incomes():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM modified_income ORDER BY entry_date DESC')
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def delete_modified_income(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM modified_income WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+
+def get_total_bills_due():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=0')
+    total = cursor.fetchone()[0] or 0
+    conn.close()
+    return total
+
+def get_paid_bills_history(period_type='all'):
+    conn = get_db()
+    cursor = conn.cursor()
+    if period_type == 'all':
+        cursor.execute('''
+            SELECT bills.*, payees.name as payee_name
+            FROM bills
+            LEFT JOIN payees ON bills.payee_id = payees.id
+            WHERE bills.is_paid=1
+            ORDER BY bills.paid_date DESC
+        ''')
+    else:
+        cursor.execute('''
+            SELECT bills.*, payees.name as payee_name
+            FROM bills
+            LEFT JOIN payees ON bills.payee_id = payees.id
+            WHERE bills.is_paid=1
+            ORDER BY bills.paid_date DESC
+        ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_period_breakdown():
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.now()
+    results = {}
+
+    # Weekly (last 7 days)
+    week_ago = (now - timedelta(days=7)).strftime('%Y-%m-%d')
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=1 AND paid_date >= ?', (week_ago,))
+    results['weekly_paid'] = cursor.fetchone()[0] or 0
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=0 AND due_date >= ? AND due_date <= ?',
+                   (now.strftime('%Y-%m-%d'), (now + timedelta(days=7)).strftime('%Y-%m-%d')))
+    results['weekly_due'] = cursor.fetchone()[0] or 0
+
+    # Biweekly (last 14 days)
+    two_weeks_ago = (now - timedelta(days=14)).strftime('%Y-%m-%d')
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=1 AND paid_date >= ?', (two_weeks_ago,))
+    results['biweekly_paid'] = cursor.fetchone()[0] or 0
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=0 AND due_date >= ? AND due_date <= ?',
+                   (now.strftime('%Y-%m-%d'), (now + timedelta(days=14)).strftime('%Y-%m-%d')))
+    results['biweekly_due'] = cursor.fetchone()[0] or 0
+
+    # Monthly (last 30 days)
+    month_ago = (now - timedelta(days=30)).strftime('%Y-%m-%d')
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=1 AND paid_date >= ?', (month_ago,))
+    results['monthly_paid'] = cursor.fetchone()[0] or 0
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=0 AND due_date >= ? AND due_date <= ?',
+                   (now.strftime('%Y-%m-%d'), (now + timedelta(days=30)).strftime('%Y-%m-%d')))
+    results['monthly_due'] = cursor.fetchone()[0] or 0
+
+    # Yearly (last 365 days)
+    year_ago = (now - timedelta(days=365)).strftime('%Y-%m-%d')
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=1 AND paid_date >= ?', (year_ago,))
+    results['yearly_paid'] = cursor.fetchone()[0] or 0
+    cursor.execute('SELECT COALESCE(SUM(amount), 0) FROM bills WHERE is_paid=0 AND due_date >= ? AND due_date <= ?',
+                   (now.strftime('%Y-%m-%d'), (now + timedelta(days=365)).strftime('%Y-%m-%d')))
+    results['yearly_due'] = cursor.fetchone()[0] or 0
+
+    conn.close()
+    return results
+
+def get_user_by_username(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE username=?', (username,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+def create_user(username, password_hash):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (username, password_hash))
+        conn.commit()
+        return True
+    except:
+        return False
+    finally:
+        conn.close()
+
+def has_users():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) as count FROM users')
+    count = cursor.fetchone()['count']
+    conn.close()
+    return count > 0

@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 import calendar
 import csv
 import io
@@ -9,6 +11,21 @@ app = Flask(__name__)
 app.secret_key = 'budget-app-secret-key-2024'
 
 db.init_db()
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.before_request
+def check_auth():
+    if request.endpoint in ('login', 'logout', 'setup', 'static'):
+        return
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
 
 def add_months(dt, months):
     # Safely add months to a date
@@ -52,6 +69,50 @@ def inject_globals():
         'category_options': cat_opts,
         'bank_accounts': bank_accounts
     }
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        user = db.get_user_by_username(username)
+        if user and check_password_hash(user['password_hash'], password):
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            flash('Logged in successfully.', 'success')
+            return redirect(url_for('dashboard'))
+        flash('Invalid username or password.', 'danger')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    if db.has_users():
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
+        if not username or not password:
+            flash('Username and password are required.', 'danger')
+        elif password != confirm:
+            flash('Passwords do not match.', 'danger')
+        elif len(password) < 6:
+            flash('Password must be at least 6 characters.', 'danger')
+        else:
+            password_hash = generate_password_hash(password)
+            if db.create_user(username, password_hash):
+                flash('Account created! Please log in.', 'success')
+                return redirect(url_for('login'))
+            flash('Username already taken.', 'danger')
+    return render_template('setup.html')
 
 @app.route('/')
 def dashboard():
@@ -857,7 +918,8 @@ def mark_bill_unpaid(id):
 def delete_bill(id):
     db.delete_bill(id)
     flash('Bill deleted.', 'info')
-    return redirect(url_for('bills'))
+    next_url = request.args.get('next', url_for('bills'))
+    return redirect(next_url)
 
 @app.route('/payees')
 def payees():
@@ -870,7 +932,10 @@ def categories():
     payee_categories = list(set(p['category'] for p in payees if p.get('category')))
     budget_categories = db.get_budget_categories()
     all_categories_flat = db.get_all_budget_categories_flat()
-    return render_template('categories.html', payee_categories=payee_categories, budget_categories=budget_categories, all_categories_flat=all_categories_flat)
+    # Include all budget category names in the payee categories list
+    budget_names = [c['name'] for c in all_categories_flat]
+    combined = sorted(set(payee_categories + budget_names))
+    return render_template('categories.html', payee_categories=combined, budget_categories=budget_categories, all_categories_flat=all_categories_flat)
 
 @app.route('/add_payee_category', methods=['POST'])
 def add_payee_category():
@@ -1364,13 +1429,40 @@ def budget():
                 total_actual += bill.get('amount', 0)
     
     total_budget = sum(cat['monthly_limit'] for cat in categories)
+
+    parent_totals = {}
+    for parent in hierarchical:
+        budget = parent['monthly_limit']
+        spent = sum(b['amount'] for b in bills_by_category.get(parent['id'], []) if b.get('is_paid'))
+        for child in parent.get('children', []):
+            budget += child['monthly_limit']
+            spent += sum(b['amount'] for b in bills_by_category.get(child['id'], []) if b.get('is_paid'))
+        parent_totals[parent['id']] = {'budget': budget, 'spent': spent}
+
+    # Biweekly / Monthly summary at the top
+    last_paychecks = db.get_all_paychecks()
+    last_net = last_paychecks[0].get('net_pay', 0) if last_paychecks else 0
+
+    biweekly_income = last_net
+    biweekly_expenses = total_budget / 2 if total_budget else 0
+
+    monthly_income = last_net * 26 / 12 if last_net else 0
+    monthly_expenses = total_budget
+
     return render_template('budget.html', 
                         categories=categories,
                         hierarchical_categories=hierarchical,
                         bills_by_category=bills_by_category,
                         all_bills=all_bills,
                         total_actual=total_actual,
-                        total_budget=total_budget)
+                        total_budget=total_budget,
+                        parent_totals=parent_totals,
+                        biweekly_income=biweekly_income,
+                        biweekly_expenses=biweekly_expenses,
+                        biweekly_remaining=biweekly_income - biweekly_expenses,
+                        monthly_income=monthly_income,
+                        monthly_expenses=monthly_expenses,
+                        monthly_remaining=monthly_income - monthly_expenses)
 
 @app.route('/add_budget_category')
 def add_budget_category_form():
@@ -1414,6 +1506,79 @@ def delete_budget_category(id):
     db.delete_budget_category(id)
     flash('Budget category deleted.', 'info')
     return redirect(url_for('budget'))
+
+@app.route('/reports')
+def reports():
+    periods = db.get_pay_period_history()
+    return render_template('reports.html', periods=periods)
+
+@app.route('/modified_income', methods=['GET', 'POST'])
+def modified_income():
+    if request.method == 'POST':
+        amount = float(request.form.get('amount', 0))
+        entry_date = request.form.get('entry_date', datetime.now().strftime('%Y-%m-%d'))
+        period_type = request.form.get('period_type', 'biweekly')
+        notes = request.form.get('notes', '')
+        if amount > 0:
+            db.add_modified_income(amount, entry_date, period_type, notes)
+            flash('Income added!', 'success')
+        else:
+            flash('Amount must be greater than 0', 'danger')
+        return redirect(url_for('modified_income'))
+
+    incomes = db.get_modified_incomes()
+    total_bills_due = db.get_total_bills_due()
+    paid_bills = db.get_paid_bills_history()
+    breakdown = db.get_period_breakdown()
+    total_income = sum(i['amount'] for i in incomes)
+    total_paid = sum(b['amount'] for b in paid_bills)
+    remaining = total_income - total_bills_due
+
+    return render_template('modified_income.html',
+                         incomes=incomes,
+                         total_income=total_income,
+                         total_bills_due=total_bills_due,
+                         total_paid=total_paid,
+                         paid_bills=paid_bills,
+                         breakdown=breakdown,
+                         remaining=remaining)
+
+@app.route('/delete_modified_income/<int:id>')
+def delete_modified_income(id):
+    db.delete_modified_income(id)
+    flash('Income entry deleted.', 'info')
+    return redirect(url_for('modified_income'))
+
+@app.route('/api/add_subcategory', methods=['POST'])
+def api_add_subcategory():
+    data = request.get_json()
+    cat_id = db.add_budget_category(
+        data['name'],
+        float(data['monthly_limit']),
+        data.get('color', '#2E7D32'),
+        parent_id=int(data['parent_id'])
+    )
+    return jsonify({'success': True, 'id': cat_id})
+
+@app.route('/api/update_subcategory/<int:id>', methods=['POST'])
+def api_update_subcategory(id):
+    data = request.get_json()
+    cat = db.get_budget_category(id)
+    if not cat:
+        return jsonify({'error': 'Category not found'}), 404
+    db.update_budget_category(
+        id,
+        data['name'],
+        float(data['monthly_limit']),
+        data.get('color', cat.get('color', '#2E7D32')),
+        parent_id=cat.get('parent_id')
+    )
+    return jsonify({'success': True})
+
+@app.route('/api/delete_subcategory/<int:id>', methods=['POST'])
+def api_delete_subcategory(id):
+    db.delete_budget_category(id)
+    return jsonify({'success': True})
 
 @app.route('/api/dashboard_stats')
 def api_dashboard_stats():

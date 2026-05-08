@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - RETTEEE BUDGET{% endblock %}
+{% block page_title %}Pay Period Reports{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-bar-chart"></i> Pay Period History</h5>
+            </div>
+            <div class="card-body">
+                {% if periods %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Pay Period</th>
+                                <th>Check Date</th>
+                                <th class="text-end">Income (Net)</th>
+                                <th class="text-end">Bills Paid</th>
+                                <th class="text-end">Net Difference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in periods %}
+                            <tr>
+                                <td>{{ p.start }} to {{ p.end }}</td>
+                                <td>{{ p.check_date }}</td>
+                                <td class="text-end text-success">+${{ "%.2f"|format(p.income_net) }}</td>
+                                <td class="text-end text-danger">-${{ "%.2f"|format(p.expenses_paid) }}</td>
+                                <td class="text-end {% if p.net >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                    ${{ "%.2f"|format(p.net) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No pay period data available. Import paychecks to see reports.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

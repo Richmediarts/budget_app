@@ -58,7 +58,7 @@
                                                                     {% set due_date = datetime.strptime(bill.due_date, '%Y-%m-%d').date() %}
                                                                     {% set today = datetime.now().date() %}
                                                                     {% set days_until = (due_date - today).days %}
-                                                                    <tr class="{% if bill.is_paid %}table-success{% elif days_until < 0 %}table-danger{% elif days_until <= 3 %}table-warning{% endif %}">
+                                                                    <tr data-bill-id="{{ bill.id }}" class="{% if bill.is_paid %}table-success{% elif days_until < 0 %}table-danger{% elif days_until <= 3 %}table-warning{% endif %}">
                                                                         <td>
                                                                             <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
                                                                             {% if bill.payee_category %}
@@ -192,11 +192,27 @@ document.getElementById('searchBills')?.addEventListener('input', function(e) {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(search) ? '' : 'none';
     });
-    // Show/hide accordion items based on visible rows
     document.querySelectorAll('.accordion-item').forEach(item => {
-        const visibleRows = item.querySelectorAll('.period-table tbody tr[style*="display: none"]');
+        const collapseEl = item.querySelector('.accordion-collapse');
+        if (!collapseEl) return;
+        const hiddenRows = item.querySelectorAll('.period-table tbody tr[style*="display: none"]');
         const totalRows = item.querySelectorAll('.period-table tbody tr');
-        // Keep accordion visible if it has any rows at all; filtering is within
+        const hasVisible = totalRows.length > 0 && hiddenRows.length < totalRows.length;
+        if (search.length > 0 && hasVisible) {
+            collapseEl.classList.add('show');
+            const btn = item.querySelector('.accordion-button');
+            if (btn) {
+                btn.classList.remove('collapsed');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        } else {
+            collapseEl.classList.remove('show');
+            const btn = item.querySelector('.accordion-button');
+            if (btn) {
+                btn.classList.add('collapsed');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        }
     });
 });
 
@@ -298,6 +314,34 @@ function markPaid(event, id) {
         .catch(err => {
             window.location.href = '/mark_bill_paid/' + id;
         });
+}
+
+// Auto-expand accordion and scroll to bill if bill_id is in URL
+const urlParams = new URLSearchParams(window.location.search);
+const billId = urlParams.get('bill_id');
+if (billId) {
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            const row = document.querySelector(`tr[data-bill-id="${billId}"]`);
+            if (row) {
+                const collapseEl = row.closest('.accordion-collapse');
+                if (collapseEl) {
+                    collapseEl.classList.add('show');
+                    const btn = document.querySelector(`[data-bs-target="#${collapseEl.id}"]`);
+                    if (btn) {
+                        btn.classList.remove('collapsed');
+                        btn.setAttribute('aria-expanded', 'true');
+                    }
+                }
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.style.transition = 'background 0.5s';
+                row.style.background = 'rgba(46, 125, 50, 0.15)';
+                setTimeout(function() {
+                    row.style.background = '';
+                }, 2000);
+            }
+        }, 300);
+    });
 }
 </script>
 {% endblock %}
