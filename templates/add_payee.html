@@ -20,14 +20,9 @@
                         <label class="form-label">Category</label>
                         <select name="category" class="form-select">
                             <option value="">-- Select Category --</option>
-                            <option value="utilities">Utilities</option>
-                            <option value="rent">Rent/Mortgage</option>
-                            <option value="insurance">Insurance</option>
-                            <option value="subscriptions">Subscriptions</option>
-                            <option value="phone">Phone/Internet</option>
-                            <option value="medical">Medical</option>
-                            <option value="auto">Auto/Transportation</option>
-                            <option value="other">Other</option>
+                            {% for cat in category_options %}
+                                <option value="{{ cat.display }}">{{ cat.display }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">

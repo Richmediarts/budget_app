@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+{% block title %}Goal Planning{% endblock %}
+{% block page_title %}Goal Planning{% endblock %}
+
+{% block content %}
+<style>
+@media (max-width: 767.98px) {
+    .goals-header { flex-direction: column; align-items: flex-start !important; gap: 8px; }
+    .goals-header > div:last-child { align-self: stretch; }
+    .goals-header .btn { width: 100%; }
+    .stat-card { padding: 12px 10px; gap: 10px; }
+    .stat-icon { width: 36px; height: 36px; font-size: 1rem; }
+    .stat-info h2 { font-size: 1.1rem; }
+    .stat-info h3 { font-size: 0.65rem; }
+    .goals-table thead { display: none; }
+    .goals-table, .goals-table tbody, .goals-table tbody tr { display: block; }
+    .goals-table tbody tr { padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: var(--bg-card); }
+    .goals-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border: none; text-align: right; }
+    .goals-table tbody td:first-child { justify-content: flex-start; padding-bottom: 8px; border-bottom: 1px solid var(--glass-border); margin-bottom: 6px; }
+    .goals-table tbody td[data-label]::before { content: attr(data-label); font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-align: left; }
+    .goals-table tbody td.amount { padding-top: 5px; }
+    .debt-table thead { display: none; }
+    .debt-table, .debt-table tbody, .debt-table tbody tr { display: block; }
+    .debt-table tbody tr { padding: 10px 12px; margin-bottom: 8px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: var(--bg-card); }
+    .debt-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border: none; text-align: right; }
+    .debt-table tbody td:first-child { justify-content: flex-start; }
+    .debt-table tbody td[data-label]::before { content: attr(data-label); font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-align: left; }
+    .debt-table tbody td .debt-pmt { width: 100% !important; max-width: 120px; }
+    .debt-table tbody td .badge { margin-left: auto; }
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3 goals-header">
+    <div>
+        <h5 class="mb-1" style="color: var(--text-main);">6-Month Financial Plan</h5>
+        <p class="text-muted mb-0" style="font-size:0.85rem;">Set monthly savings and debt payment goals. Adjust targets below and the projection updates automatically.</p>
+    </div>
+    <div>
+        <button class="btn btn-outline-primary btn-sm" onclick="resetGoals()"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card bank-balance">
+            <div class="stat-icon"><i class="bi bi-bank"></i></div>
+            <div class="stat-info">
+                <h3>Assets</h3>
+                <h2 class="amount">${{ "%.0f"|format(total_assets) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card" style="border-color: var(--danger);">
+            <div class="stat-icon" style="background: linear-gradient(135deg, var(--danger) 0%, #DC2626 100%); color:#fff;"><i class="bi bi-credit-card"></i></div>
+            <div class="stat-info">
+                <h3>Credit Debt</h3>
+                <h2 class="amount" style="color: var(--danger) !important;">${{ "%.0f"|format(total_credit) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card" style="border-color: #F59E0B;">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color:#fff;"><i class="bi bi-car-front"></i></div>
+            <div class="stat-info">
+                <h3>Loan Debt</h3>
+                <h2 class="amount" style="color: #F59E0B;">${{ "%.0f"|format(total_loans) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card net-worth">
+            <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-info">
+                <h3>Net Worth</h3>
+                <h2 class="amount">${{ "%.0f"|format(net_worth) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card income-card">
+            <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-info">
+                <h3>Monthly Income</h3>
+                <h2 class="amount income-amount">${{ "%.0f"|format(monthly_income) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card expense-card">
+            <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+            <div class="stat-info">
+                <h3>Monthly Budget</h3>
+                <h2 class="amount expense-amount">${{ "%.0f"|format(monthly_budget) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card remaining-card">
+            <div class="stat-icon"><i class="bi bi-piggy-bank"></i></div>
+            <div class="stat-info">
+                <h3>Monthly Surplus</h3>
+                <h2 class="amount remaining-amount">${{ "%.0f"|format(monthly_income - monthly_budget) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card" style="border-color: #8B5CF6;">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); color:#fff;"><i class="bi bi-calendar-check"></i></div>
+            <div class="stat-info">
+                <h3>Paycheck (Net)</h3>
+                <h2 class="amount" style="color: #A78BFA;">${{ "%.0f"|format(last_net) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-calendar-range me-2"></i>6-Month Projection</h5>
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="avalancheMode" onchange="recalcPlan()" checked>
+            <label class="form-check-label" for="avalancheMode" style="font-size:0.85rem;">Avalanche (highest rate first)</label>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark mb-0 goals-table" id="planTable">
+                <thead>
+                    <tr>
+                        <th style="min-width:130px;">Month</th>
+                        <th>Start Net Worth</th>
+                        <th>Income</th>
+                        <th>Expenses</th>
+                        <th>Debt Payments</th>
+                        <th>Savings</th>
+                        <th>End Net Worth</th>
+                        <th style="min-width:160px;">Targets</th>
+                    </tr>
+                </thead>
+                <tbody id="planBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Debt Breakdown</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark mb-0 debt-table" id="debtTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="text" onclick="sortTable(this, 'debtBody')" style="cursor:pointer;">Debt <i class="bi bi-arrow-down-up" style="font-size:0.7rem;opacity:0.4;"></i></th>
+                        <th class="sortable" data-sort="text" onclick="sortTable(this, 'debtBody')" style="cursor:pointer;">Type <i class="bi bi-arrow-down-up" style="font-size:0.7rem;opacity:0.4;"></i></th>
+                        <th class="sortable" data-sort="number" onclick="sortTable(this, 'debtBody')" style="cursor:pointer;">Balance <i class="bi bi-arrow-down-up" style="font-size:0.7rem;opacity:0.4;"></i></th>
+                        <th class="sortable" data-sort="number" onclick="sortTable(this, 'debtBody')" style="cursor:pointer;">Rate <i class="bi bi-arrow-down-up" style="font-size:0.7rem;opacity:0.4;"></i></th>
+                        <th>Monthly Payment</th>
+                        <th>Interest/Month</th>
+                        <th>6mo Payoff</th>
+                    </tr>
+                </thead>
+                <tbody id="debtBody">
+                    {% for d in all_debts %}
+                    <tr>
+                        <td data-label="Debt">{{ d.name }}</td>
+                        <td data-label="Type"><span class="badge {% if d.type == 'Credit Card' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ d.type }}</span></td>
+                        <td data-label="Balance" class="amount">${{ "%.0f"|format(d.balance) }}</td>
+                        <td data-label="Rate">{% if d.rate > 0 %}{{ "%.1f"|format(d.rate) }}%{% else %}—{% endif %}</td>
+                        <td data-label="Payment"><input type="number" class="form-control form-control-sm debt-pmt" style="width:110px;min-height:36px;" data-debt-id="{{ d.id }}" value="0" min="0" step="50" onchange="recalcPlan()" oninput="recalcPlan()"></td>
+                        <td data-label="Interest/Mo" id="interest_{{ d.id }}">$0</td>
+                        <td data-label="6mo Payoff" id="payoff_{{ d.id }}">—</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-muted">No debts found</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-piggy-bank me-2"></i>Savings Goals</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Monthly Savings Target</label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="monthlySavings" value="0" min="0" step="100" onchange="recalcPlan()" oninput="recalcPlan()">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Extra Monthly Debt Payment</label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="extraDebtPayment" value="0" min="0" step="100" onchange="recalcPlan()" oninput="recalcPlan()">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Savings Account</label>
+                <select class="form-select" id="savingsAccount">
+                    <option value="">— Select Account —</option>
+                    {% for a in assets if a.account_type in ('savings', 'money_market') %}
+                    <option value="{{ a.id }}">{{ a.name }} (${{ "%.0f"|format(a.current_balance) }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-graph-down me-2"></i>Credit Utilization Simulator</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-4 col-md-2">
+                <div class="glass-card text-center p-2" style="border-color: var(--glass-border);">
+                    <small class="text-muted" style="font-size:0.7rem;">Total Limit</small>
+                    <div class="amount" id="utilTotalLimit" style="font-size:1.1rem;">$0</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="glass-card text-center p-2" style="border-color: var(--glass-border);">
+                    <small class="text-muted" style="font-size:0.7rem;">Total Balance</small>
+                    <div class="amount" id="utilTotalBalance" style="font-size:1.1rem;color:var(--danger);">$0</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="glass-card text-center p-2" style="border-color: var(--glass-border);">
+                    <small class="text-muted" style="font-size:0.7rem;">Utilization</small>
+                    <div class="amount" id="utilCurrentRate" style="font-size:1.1rem;">0%</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-card text-center p-2" style="border-color: var(--glass-border);">
+                    <small class="text-muted" style="font-size:0.7rem;">To Pay for Target</small>
+                    <div class="amount" id="utilNeeded" style="font-size:1.1rem;color:var(--primary);">$0</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="glass-card text-center p-2" style="border-color: var(--glass-border);">
+                    <small class="text-muted" style="font-size:0.7rem;">Score Impact</small>
+                    <div class="amount" id="utilScoreImpact" style="font-size:1.1rem;">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Target Utilization Rate</label>
+                <div class="d-flex align-items-center gap-3">
+                    <input type="range" class="form-range flex-grow-1" id="targetUtilSlider" min="0" max="100" value="30" oninput="updateUtilSim()">
+                    <span class="badge fs-6" id="targetUtilLabel" style="min-width:50px;background:var(--primary);color:#000;">30%</span>
+                </div>
+                <div class="d-flex gap-2 mt-1">
+                    <button class="btn btn-sm btn-outline-primary" onclick="setTargetUtil(0)">0%</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="setTargetUtil(10)">10%</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="setTargetUtil(30)">30%</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="setTargetUtil(50)">50%</button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Extra Monthly Payment</label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="utilMonthlyPmt" value="0" min="0" step="50" oninput="updateUtilSim()">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Target Payoff Month</label>
+                <div class="fw-bold" id="utilPayoffMonths" style="font-size:1.3rem;color:var(--primary);">—</div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-dark mb-0">
+                <thead>
+                    <tr>
+                        <th>Card</th>
+                        <th>Balance</th>
+                        <th>Limit</th>
+                        <th>Utilization</th>
+                        <th>Extra Payment</th>
+                        <th>New Balance</th>
+                        <th>New Util</th>
+                    </tr>
+                </thead>
+                <tbody id="utilBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const MONTHLY_INCOME = {{ monthly_income }};
+const MONTHLY_BUDGET = {{ monthly_budget }};
+const START_NET_WORTH = {{ net_worth }};
+const DEBTS = [
+    {% for d in all_debts %}
+    {id: '{{ d.id }}', name: {{ d.name|tojson }}, type: '{{ 'card' if d.type == 'Credit Card' else 'loan' }}', balance: {{ d.balance }}, rate: {{ d.rate }}},
+    {% endfor %}
+];
+
+const CREDIT_CARDS = [
+    {% for c in credit_cards %}
+    {id: 'cc_{{ c.id }}', name: {{ c.name|tojson }}, balance: {{ c.current_balance }}, limit: {{ c.credit_limit or 0 }}},
+    {% endfor %}
+];
+
+const MONTH_NAMES = ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6'];
+
+function getMonthLabel(i) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + i);
+    return d.toLocaleString('default', { month: 'short', year: 'numeric' });
+}
+
+function loadGoals() {
+    try {
+        return JSON.parse(localStorage.getItem('goalsPlan')) || {};
+    } catch { return {}; }
+}
+
+function saveGoals(data) {
+    const existing = loadGoals();
+    Object.assign(existing, data);
+    localStorage.setItem('goalsPlan', JSON.stringify(existing));
+}
+
+function getSavingsTarget() {
+    return parseFloat(document.getElementById('monthlySavings').value) || 0;
+}
+
+function getExtraDebtPayment() {
+    return parseFloat(document.getElementById('extraDebtPayment').value) || 0;
+}
+
+function getDebtPayments() {
+    const pmts = {};
+    document.querySelectorAll('.debt-pmt').forEach(function(inp) {
+        pmts[inp.dataset.debtId] = parseFloat(inp.value) || 0;
+    });
+    return pmts;
+}
+
+function useAvalanche() {
+    return document.getElementById('avalancheMode').checked;
+}
+
+function setTargetUtil(val) {
+    document.getElementById('targetUtilSlider').value = val;
+    document.getElementById('targetUtilLabel').textContent = val + '%';
+    updateUtilSim();
+}
+
+function fmtCurrency(n) {
+    return '$' + Math.round(n).toLocaleString();
+}
+
+function updateUtilSim() {
+    const targetPct = parseFloat(document.getElementById('targetUtilSlider').value) || 0;
+    document.getElementById('targetUtilLabel').textContent = targetPct + '%';
+    document.getElementById('targetUtilLabel').style.background = targetPct <= 10 ? 'var(--primary)' : targetPct <= 30 ? '#F59E0B' : 'var(--danger)';
+    document.getElementById('targetUtilLabel').style.color = targetPct <= 10 ? '#000' : '#fff';
+
+    const extraPmt = parseFloat(document.getElementById('utilMonthlyPmt').value) || 0;
+
+    let totalLimit = 0, totalBalance = 0;
+    CREDIT_CARDS.forEach(function(c) { totalLimit += c.limit; totalBalance += c.balance; });
+
+    const currentUtil = totalLimit > 0 ? (totalBalance / totalLimit * 100) : 0;
+    const targetBalance = totalLimit * (targetPct / 100);
+    const needed = Math.max(0, totalBalance - targetBalance);
+
+    document.getElementById('utilTotalLimit').textContent = fmtCurrency(totalLimit);
+    document.getElementById('utilTotalBalance').textContent = fmtCurrency(totalBalance);
+    document.getElementById('utilCurrentRate').textContent = currentUtil.toFixed(1) + '%';
+    document.getElementById('utilCurrentRate').style.color = currentUtil > 50 ? 'var(--danger)' : currentUtil > 30 ? '#F59E0B' : 'var(--primary)';
+    document.getElementById('utilNeeded').textContent = fmtCurrency(needed);
+    document.getElementById('utilNeeded').style.color = needed > 0 ? 'var(--danger)' : 'var(--primary)';
+
+    let scoreText = '—', scoreColor = 'var(--text-muted)';
+    const newUtil = totalLimit > 0 ? ((totalBalance - Math.min(needed, totalBalance)) / totalLimit * 100) : 0;
+    if (currentUtil <= 10) { scoreText = 'Excellent ✓'; scoreColor = 'var(--primary)'; }
+    else if (newUtil <= 10) { scoreText = 'Excellent after payment ✓'; scoreColor = 'var(--primary)'; }
+    else if (newUtil <= 30) { scoreText = 'Good range ↑'; scoreColor = '#F59E0B'; }
+    else if (newUtil <= 50) { scoreText = 'Fair — keep paying ↓'; scoreColor = '#F59E0B'; }
+    else { scoreText = 'Poor — pay down ASAP ⚠'; scoreColor = 'var(--danger)'; }
+    document.getElementById('utilScoreImpact').textContent = scoreText;
+    document.getElementById('utilScoreImpact').style.color = scoreColor;
+
+    if (extraPmt > 0 && needed > 0) {
+        const months = Math.ceil(needed / extraPmt);
+        document.getElementById('utilPayoffMonths').textContent = months + 'mo';
+        document.getElementById('utilPayoffMonths').style.color = months <= 6 ? 'var(--primary)' : months <= 12 ? '#F59E0B' : 'var(--danger)';
+    } else if (needed <= 0) {
+        document.getElementById('utilPayoffMonths').textContent = '✓ At target';
+        document.getElementById('utilPayoffMonths').style.color = 'var(--primary)';
+    } else {
+        document.getElementById('utilPayoffMonths').textContent = '—';
+        document.getElementById('utilPayoffMonths').style.color = 'var(--text-muted)';
+    }
+
+    const tbody = document.getElementById('utilBody');
+    tbody.innerHTML = '';
+    const totalExtraForCards = needed;
+    let remaining = totalExtraForCards;
+    const sorted = CREDIT_CARDS.slice().sort(function(a, b) { return b.rate - a.rate; });
+    sorted.forEach(function(c) {
+        if (c.limit <= 0) return;
+        const curUtil = c.balance / c.limit * 100;
+        let pmt = 0;
+        if (remaining > 0 && c.balance > 0) {
+            pmt = Math.min(remaining, c.balance);
+            remaining -= pmt;
+        }
+        const newBal = Math.max(0, c.balance - pmt);
+        const newUtil = newBal / c.limit * 100;
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td>' + c.name + '</td>' +
+            '<td class="amount">' + fmtCurrency(c.balance) + '</td>' +
+            '<td class="amount">' + fmtCurrency(c.limit) + '</td>' +
+            '<td class="amount" style="color:' + (curUtil > 50 ? 'var(--danger)' : curUtil > 30 ? '#F59E0B' : 'var(--primary)') + ';">' + curUtil.toFixed(1) + '%</td>' +
+            '<td class="amount" style="color:var(--primary);">' + fmtCurrency(pmt) + '</td>' +
+            '<td class="amount">' + fmtCurrency(newBal) + '</td>' +
+            '<td class="amount" style="color:' + (newUtil > 50 ? 'var(--danger)' : newUtil > 30 ? '#F59E0B' : 'var(--primary)') + ';">' + newUtil.toFixed(1) + '%</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function recalcPlan() {
+    const savingsPerMonth = getSavingsTarget();
+    const extraTotal = getExtraDebtPayment();
+    const pmts = getDebtPayments();
+
+    const totalMinPmts = Object.values(pmts).reduce(function(s, v) { return s + v; }, 0);
+
+    const freeCash = MONTHLY_INCOME - MONTHLY_BUDGET - savingsPerMonth - extraTotal - totalMinPmts;
+
+    const debts = DEBTS.map(function(d) {
+        return {
+            id: d.id,
+            name: d.name,
+            type: d.type,
+            balance: d.balance,
+            rate: d.type === 'card' ? d.rate : 0,
+            minPmt: pmts[d.id] || 0
+        };
+    });
+
+    let netWorth = START_NET_WORTH;
+    const tbody = document.getElementById('planBody');
+    tbody.innerHTML = '';
+
+    for (let m = 0; m < 6; m++) {
+        let startNW = netWorth;
+        let income = MONTHLY_INCOME;
+        let expenses = MONTHLY_BUDGET;
+
+        let debtPayments = 0;
+
+        const sortedDebts = useAvalanche() ?
+            debts.slice().sort(function(a, b) { return b.rate - a.rate; }) :
+            debts.slice().sort(function(a, b) { return a.balance - b.balance; });
+
+        let extraRemaining = extraTotal;
+        sortedDebts.forEach(function(d) {
+            if (d.balance <= 0) return;
+            const minPmt = pmts[d.id] || 0;
+            let extra = 0;
+            if (extraRemaining > 0 && d.balance > minPmt) {
+                extra = Math.min(extraRemaining, d.balance - minPmt);
+                extraRemaining -= extra;
+            }
+            const totalPmt = minPmt + extra;
+            const actualPmt = Math.min(totalPmt, d.balance);
+            debtPayments += actualPmt;
+            const interest = d.type === 'card' ? d.balance * (d.rate / 100 / 12) : 0;
+            d.balance = Math.max(0, d.balance - actualPmt + interest);
+        });
+
+        const savings = Math.min(savingsPerMonth, freeCash + MONTHLY_BUDGET);
+
+        const endNW = startNW + income - expenses - debtPayments - savings;
+
+        const tr = document.createElement('tr');
+        const edNW = Math.round(endNW);
+        const stNW = Math.round(startNW);
+        tr.innerHTML =
+            '<td data-label="Month"><strong>' + getMonthLabel(m) + '</strong></td>' +
+            '<td data-label="Start NW" class="amount">$' + stNW.toLocaleString() + '</td>' +
+            '<td data-label="Income" class="amount income-amount">$' + Math.round(income).toLocaleString() + '</td>' +
+            '<td data-label="Expenses" class="amount expense-amount">$' + Math.round(expenses).toLocaleString() + '</td>' +
+            '<td data-label="Debt Pmt" class="amount" style="color:#F59E0B;">$' + Math.round(debtPayments).toLocaleString() + '</td>' +
+            '<td data-label="Savings" class="amount remaining-amount">$' + Math.round(savings).toLocaleString() + '</td>' +
+            '<td data-label="End NW" class="amount fw-bold" style="color:' + (endNW >= startNW ? 'var(--primary)' : 'var(--danger)') + ' !important;">$' + edNW.toLocaleString() + '</td>' +
+            '<td data-label="Status"><small style="color:var(--text-muted2);">' +
+                (freeCash < 0 && m === 0 ? '<span class="text-danger">⚠ Deficit</span>' : '') +
+                (endNW > startNW ? '↑' : endNW < startNW ? '↓' : '→') +
+            '</small></td>';
+
+        tbody.appendChild(tr);
+        netWorth = endNW;
+    }
+
+    saveGoals({
+        monthlySavings: savingsPerMonth,
+        extraDebtPayment: extraTotal,
+        debtPayments: pmts
+    });
+
+    updateDebtSummary(debts);
+}
+
+function updateDebtSummary(debts) {
+    debts.forEach(function(d) {
+        const interestEl = document.getElementById('interest_' + d.id);
+        const payoffEl = document.getElementById('payoff_' + d.id);
+        if (interestEl) {
+            const monthlyInterest = d.rate / 100 / 12 * d.balance;
+            interestEl.textContent = '$' + Math.round(monthlyInterest).toLocaleString();
+        }
+        if (payoffEl) {
+            const minPmt = d.minPmt || 0;
+            if (minPmt > 0 && d.balance > 0) {
+                const monthlyInterest = d.rate / 100 / 12 * d.balance;
+                const effectivePmt = minPmt - monthlyInterest;
+                if (effectivePmt > 0) {
+                    const months = Math.ceil(d.balance / effectivePmt);
+                    payoffEl.textContent = months + 'mo' + (months > 6 ? ' ⚠' : ' ✓');
+                } else {
+                    payoffEl.textContent = '∞';
+                }
+            } else {
+                payoffEl.textContent = d.balance <= 0 ? 'Paid ✓' : '—';
+            }
+        }
+    });
+}
+
+let sortState = {};
+
+function sortTable(th, tbodyId) {
+    const col = Array.from(th.parentNode.children).indexOf(th);
+    const tbody = document.getElementById(tbodyId);
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    if (!rows.length) return;
+
+    const sortType = th.dataset.sort || 'text';
+    const key = tbodyId + '_' + col;
+    const asc = sortState[key] !== 'asc';
+    sortState = {};
+    sortState[key] = asc ? 'asc' : 'desc';
+
+    const sortIcons = th.parentNode.querySelectorAll('.sortable i.bi');
+    sortIcons.forEach(function(icon) { icon.className = 'bi bi-arrow-down-up'; icon.style.opacity = '0.4'; });
+    const icon = th.querySelector('i.bi');
+    if (icon) {
+        icon.className = asc ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+        icon.style.opacity = '1';
+    }
+
+    rows.sort(function(a, b) {
+        const aCells = a.querySelectorAll('td');
+        const bCells = b.querySelectorAll('td');
+        let aVal = aCells[col] ? aCells[col].textContent.trim() : '';
+        let bVal = bCells[col] ? bCells[col].textContent.trim() : '';
+
+        if (sortType === 'number') {
+            aVal = parseFloat(aVal.replace(/[^0-9.\-]/g, '')) || 0;
+            bVal = parseFloat(bVal.replace(/[^0-9.\-]/g, '')) || 0;
+        } else {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+        }
+
+        if (aVal < bVal) return asc ? -1 : 1;
+        if (aVal > bVal) return asc ? 1 : -1;
+        return 0;
+    });
+
+    rows.forEach(function(row) { tbody.appendChild(row); });
+}
+
+function resetGoals() {
+    if (!confirm('Reset all goal targets to zero?')) return;
+    document.getElementById('monthlySavings').value = 0;
+    document.getElementById('extraDebtPayment').value = 0;
+    document.querySelectorAll('.debt-pmt').forEach(function(inp) { inp.value = 0; });
+    localStorage.removeItem('goalsPlan');
+    recalcPlan();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const saved = loadGoals();
+    if (saved.monthlySavings) document.getElementById('monthlySavings').value = saved.monthlySavings;
+    if (saved.extraDebtPayment) document.getElementById('extraDebtPayment').value = saved.extraDebtPayment;
+    if (saved.debtPayments) {
+        document.querySelectorAll('.debt-pmt').forEach(function(inp) {
+            const val = saved.debtPayments[inp.dataset.debtId];
+            if (val) inp.value = val;
+        });
+    }
+    recalcPlan();
+    updateUtilSim();
+});
+</script>
+{% endblock %}

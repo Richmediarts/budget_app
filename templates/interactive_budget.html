@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Budget - RETTEEE BUDGET</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        (function() {
+            var t = localStorage.getItem('theme');
+            if (t === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.documentElement.style.colorScheme = 'light';
+            }
+        })();
+    </script>
+    <style>
+        .ib-content { max-width: 1400px; margin: 0 auto; }
+        .expense-label-input { background: transparent; border: none; padding: 0; font: inherit; color: inherit; width: 100%; min-width: 60px; cursor: text; }
+        .expense-label-input:focus { outline: none; background: var(--glass); border-radius: 4px; padding: 0 4px; }
+        td input[type="number"] { background: transparent; border: none; border-bottom: 1px solid transparent; text-align: right; width: 70px; color: inherit; }
+        td input[type="number"]:focus { border-bottom-color: var(--primary); outline: none; }
+        .card-header [contenteditable]:hover, .badge[cotenteditable]:hover { background: var(--glass); border-radius: 4px; padding: 0 4px; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body>
+    {% if session.user_id %}
+    <nav class="mobile-nav d-md-none">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('paychecks') }}" class="mobile-nav-item"><i class="bi bi-cash-stack"></i><span>Paychecks</span></a>
+        <a href="{{ url_for('bills') }}" class="mobile-nav-item"><i class="bi bi-receipt"></i><span>Bills</span></a>
+        <a href="{{ url_for('bank_accounts') }}" class="mobile-nav-item"><i class="bi bi-bank"></i><span>Accounts</span></a>
+        <button class="mobile-nav-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar"><i class="bi bi-list"></i><span>More</span></button>
+    </nav>
+
+    <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="mobileSidebar">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title"><img src="/static/images/web-app-manifest-192x192.png" alt="" style="height: 28px; margin-right: 8px;">RETTEEE BUDGET</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <nav class="sidebar-nav-mobile">
+                <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a href="{{ url_for('paychecks') }}" class="nav-item"><i class="bi bi-cash-stack"></i> Paychecks</a>
+                <a href="{{ url_for('import_paystub_form') }}" class="nav-item"><i class="bi bi-upload"></i> Import</a>
+                <a href="{{ url_for('bills') }}" class="nav-item"><i class="bi bi-receipt"></i> Bills</a>
+                <a href="{{ url_for('payees') }}" class="nav-item"><i class="bi bi-people"></i> Payees</a>
+                <a href="{{ url_for('bank_accounts') }}" class="nav-item"><i class="bi bi-bank"></i> Bank Accounts</a>
+                <a href="{{ url_for('transactions') }}" class="nav-item"><i class="bi bi-list-ol"></i> Transactions</a>
+                <a href="{{ url_for('credit_cards') }}" class="nav-item"><i class="bi bi-credit-card"></i> Credit Cards</a>
+                <a href="{{ url_for('categories') }}" class="nav-item"><i class="bi bi-tags"></i> Categories</a>
+                <a href="{{ url_for('budget') }}" class="nav-item"><i class="bi bi-pie-chart"></i> Budget</a>
+                <a href="{{ url_for('interactive_budget') }}" class="nav-item active"><i class="bi bi-graph-up"></i> Interactive Budget</a>
+                <a href="{{ url_for('reports') }}" class="nav-item"><i class="bi bi-bar-chart"></i> Reports</a>
+                <a href="{{ url_for('modified_income') }}" class="nav-item"><i class="bi bi-pencil-square"></i> Modified Income</a>
+                <hr>
+                <a href="#" class="nav-item theme-toggle-btn" onclick="toggleTheme(); return false;">
+                    <i class="bi bi-sun-fill theme-toggle-icon" id="themeIconMobile"></i> <span id="themeLabelMobile">Light</span>
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-item text-danger"><i class="bi bi-box-arrow-left"></i> Logout</a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="sidebar d-none d-md-block" id="sidebar">
+        <div class="sidebar-header">
+            <h4 style="cursor: pointer; user-select: none;" onclick="toggleSidebar()" title="Toggle Sidebar"><img src="/static/images/web-app-manifest-192x192.png" alt="" style="height: 28px; width: 28px; vertical-align: middle; pointer-events: none;"><span class="brand-text" style="margin-left: 8px;">RETTEEE BUDGET</span></h4>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar"><i class="bi bi-chevron-left"></i></button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-speedometer2"></i> <span>Dashboard</span></a>
+            <a href="{{ url_for('paychecks') }}" class="nav-item"><i class="bi bi-cash-stack"></i> <span>Paychecks</span></a>
+            <a href="{{ url_for('import_paystub_form') }}" class="nav-item"><i class="bi bi-upload"></i> <span>Import</span></a>
+            <a href="{{ url_for('bills') }}" class="nav-item"><i class="bi bi-receipt"></i> <span>Bills</span></a>
+            <a href="{{ url_for('payees') }}" class="nav-item"><i class="bi bi-people"></i> <span>Payees</span></a>
+            <a href="{{ url_for('bank_accounts') }}" class="nav-item"><i class="bi bi-bank"></i> <span>Bank Accounts</span></a>
+            <a href="{{ url_for('transactions') }}" class="nav-item"><i class="bi bi-list-ol"></i> <span>Transactions</span></a>
+            <a href="{{ url_for('credit_cards') }}" class="nav-item"><i class="bi bi-credit-card"></i> <span>Credit Cards</span></a>
+            <a href="{{ url_for('categories') }}" class="nav-item"><i class="bi bi-tags"></i> <span>Categories</span></a>
+            <a href="{{ url_for('budget') }}" class="nav-item"><i class="bi bi-pie-chart"></i> <span>Budget</span></a>
+            <a href="{{ url_for('interactive_budget') }}" class="nav-item active"><i class="bi bi-graph-up"></i> <span>Interactive Budget</span></a>
+            <a href="{{ url_for('reports') }}" class="nav-item"><i class="bi bi-bar-chart"></i> <span>Reports</span></a>
+            <a href="{{ url_for('modified_income') }}" class="nav-item"><i class="bi bi-pencil-square"></i> <span>Modified Income</span></a>
+            <hr>
+            <a href="#" class="nav-item theme-toggle-btn" onclick="toggleTheme(); return false;">
+                <i class="bi bi-sun-fill theme-toggle-icon" id="themeIconDesktop"></i> <span id="themeLabelDesktop">Light</span>
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-item text-danger"><i class="bi bi-box-arrow-left"></i> <span>Logout</span></a>
+        </nav>
+    </div>
+    {% endif %}
+
+    <div class="main-content">
+        <div class="top-header d-none d-md-block">
+            <h1 class="page-title">Interactive Budget</h1>
+        </div>
+        <div class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} d-flex align-items-center gap-2">
+                            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="ib-content p-3">
+                <!-- Header -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 no-print">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 48px; height: 48px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; background: var(--glass); border-radius: 12px; color: var(--primary);">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-slate-100 mb-0" style="font-weight: 700;">Interactive Budget</h2>
+                            <p class="text-muted mb-0">Real-time Financial Tracker</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 no-print flex-wrap">
+                        <button onclick="addPeriod()" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> Add Period</button>
+                        <button onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer"></i> Print</button>
+                        <button onclick="resetToDefault()" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="alert alert-dismissible fade show mb-4 no-print" style="border-radius: 12px;">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                    <div class="d-flex flex-wrap gap-4 align-items-start small">
+                        <div><strong class="text-slate-100">Estimated</strong><br>Set planned amounts. Shows budget vs actual variance.</div>
+                        <div><strong class="text-slate-100">Actual</strong><br>Enter real amounts as they come in.</div>
+                        <div><strong class="text-slate-100">Bi-Weekly Date</strong><br>Click the purple badge to pick a start/end date range. Only bills due within that window appear in the Bills dropdown.</div>
+                        <div><strong class="text-slate-100">Bills Dropdown</strong><br>Click "Bills" to add a bill from the current period as an expense row.</div>
+                    </div>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card h-100">
+                            <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Income</h3>
+                                <h2 class="amount" id="stat-total-income" style="color: #00D9A5;">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card h-100">
+                            <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Expenses</h3>
+                                <h2 class="amount" id="stat-total-expenses" style="color: #EF4444;">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card h-100">
+                            <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                            <div class="stat-info">
+                                <h3>Net Balance</h3>
+                                <h2 class="amount" id="stat-net-balance">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter -->
+                <div class="d-flex flex-wrap gap-3 align-items-center mb-4 no-print">
+                    <div class="position-relative" style="flex: 1; min-width: 200px; max-width: 400px;">
+                        <i class="bi bi-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%);"></i>
+                        <input type="text" id="filter-input" placeholder="Filter by period, income, or expense name..." oninput="render()" class="form-control form-control-sm" style="padding-left: 30px;">
+                    </div>
+                    <span id="filter-totals" class="text-muted small"></span>
+                </div>
+
+                <!-- Period Sections -->
+                <div id="periods-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <datalist id="payee-datalist">
+        {% for name in payees %}
+        <option value="{{ name }}">
+        {% endfor %}
+    </datalist>
+
+    <!-- Date Range Modal -->
+    <div class="modal fade" id="dateRangeModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveDateModal();return false">
+                    <div class="modal-header border-0 pb-0">
+                        <h6 class="modal-title">Set Period Dates</h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Start Date</label>
+                            <input type="date" id="modal-date-start" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">End Date</label>
+                            <input type="date" id="modal-date-end" class="form-control form-control-sm">
+                            <div class="form-text text-muted mt-1 small">Leave blank for a single-date period (biweekly: 14 days from start)</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearDateModal()">Clear</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- SIDEBAR TOGGLE ---
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            var icon = sidebar.querySelector('.sidebar-toggle i');
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.remove('bi-chevron-left');
+                icon.classList.add('bi-chevron-right');
+            } else {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-left');
+            }
+            localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var collapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+            if (collapsed) {
+                var sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('collapsed');
+                var icon = sidebar.querySelector('.sidebar-toggle i');
+                icon.classList.remove('bi-chevron-left');
+                icon.classList.add('bi-chevron-right');
+            }
+            
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(function(el) {
+                var span = el.querySelector('span');
+                if (span && !el.getAttribute('title')) {
+                    el.setAttribute('title', span.textContent);
+                }
+            });
+        });
+
+        // --- DATA ---
+        const payeeList = {{ payees|tojson }};
+        const serverCategories = {{ budget_categories|tojson }};
+        const serverBills = {{ bills|tojson }};
+        const pendingBudgetSync = {{ pending_budget_sync|tojson }};
+        const serverBiweeklyIncome = {{ biweekly_income }};
+
+        let state = loadState() || buildDefaultState();
+        let nextId = 1000;
+
+        function buildDefaultState() {
+            const incomeItems = [
+                { id: 'i1', label: "Salary", est: serverBiweeklyIncome || 2000, act: serverBiweeklyIncome || 0 },
+                { id: 'i2', label: "Side Hustle", est: 500, act: 0 }
+            ];
+            const expensesByCat = {};
+            serverCategories.forEach(cat => {
+                (cat.children || []).forEach(child => {
+                    const key = cat.name;
+                    if (!expensesByCat[key]) expensesByCat[key] = [];
+                    expensesByCat[key].push({
+                        id: 'c' + child.id,
+                        label: child.name,
+                        est: parseFloat(child.monthly_limit) || 0,
+                        act: 0
+                    });
+                });
+            });
+            const categoryList = Object.keys(expensesByCat);
+            const splitIdx = Math.ceil(categoryList.length / 2);
+            return {
+                periods: [
+                    { id: 1, name: "Bi-Weekly #1", date: "", income: JSON.parse(JSON.stringify(incomeItems)), expenses: [] },
+                    { id: 2, name: "Bi-Weekly #2", date: "", income: JSON.parse(JSON.stringify(incomeItems)), expenses: [] }
+                ]
+            };
+        }
+
+        function saveState() {
+            try { localStorage.setItem('interactiveBudgetBi', JSON.stringify(state)); } catch(e) {}
+        }
+
+        function loadState() {
+            try {
+                const d = localStorage.getItem('interactiveBudgetBi');
+                if (d) {
+                    const p = JSON.parse(d);
+                    if (p && p.periods) return p;
+                }
+                return null;
+            } catch(e) { return null; }
+        }
+
+        const fmt = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+        function parseMDY(str) {
+            const m = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if (!m) return null;
+            const d = new Date(parseInt(m[3]), parseInt(m[1]) - 1, parseInt(m[2]));
+            return isNaN(d) ? null : d;
+        }
+
+        function getPeriodDateRange(period) {
+            if (!period.date || !period.date.trim()) return null;
+            const d = period.date.trim();
+            const rangeMatch = d.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*[-–]\s*(\d{1,2}\/\d{1,2}\/\d{4})/);
+            if (rangeMatch) {
+                const start = parseMDY(rangeMatch[1]);
+                const end = parseMDY(rangeMatch[2]);
+                if (start && end) return { start, end };
+            }
+            const singleMatch = d.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+            if (singleMatch) {
+                const start = parseMDY(singleMatch[1]);
+                if (start) {
+                    const end = new Date(start);
+                    end.setDate(end.getDate() + 13);
+                    return { start, end };
+                }
+            }
+            return null;
+        }
+
+        function billsInPeriod(period) {
+            const range = getPeriodDateRange(period);
+            if (!range) return [];
+            return serverBills.filter(b => {
+                if (b.is_paid) return false;
+                if (!b.due_date) return false;
+                const due = new Date(b.due_date + 'T00:00:00');
+                return !isNaN(due) && due >= range.start && due <= range.end;
+            });
+        }
+
+        function refreshTotals() {
+            let totalInc = 0, totalExp = 0;
+            state.periods.forEach(p => {
+                totalInc += p.income.reduce((s, i) => s + i.act, 0);
+                totalExp += p.expenses.reduce((s, i) => s + i.act, 0);
+                const pInc = p.income.reduce((s, i) => s + i.act, 0);
+                const pExp = p.expenses.reduce((s, i) => s + i.act, 0);
+                const pIncEst = p.income.reduce((s, i) => s + i.est, 0);
+                const pExpEst = p.expenses.reduce((s, i) => s + i.est, 0);
+                const card = document.querySelector(`.card[data-pid="${p.id}"]`);
+                if (!card) return;
+                const hdr = card.querySelector('.card-header');
+                if (hdr) {
+                    const sm = hdr.querySelectorAll('small');
+                    if (sm.length >= 3) {
+                        sm[0].textContent = `Inc: ${fmt(pIncEst)} est / ${fmt(pInc)} act`;
+                        sm[2].textContent = `Exp: ${fmt(pExpEst)} est / ${fmt(pExp)} act`;
+                    }
+                }
+                card.querySelectorAll('table').forEach(t => {
+                    const isInc = t.closest('.col-lg-6:first-child');
+                    const est = isInc ? pIncEst : pExpEst;
+                    const act = isInc ? pInc : pExp;
+                    const diff = isInc ? (pInc - pIncEst) : (pExpEst - pExp);
+                    const tfoot = t.querySelector('tfoot');
+                    if (tfoot) {
+                        const c = tfoot.querySelectorAll('td:not(.no-print)');
+                        if (c.length >= 3) { c[0].textContent = fmt(est); c[1].textContent = fmt(act); c[2].textContent = fmt(diff); }
+                    }
+                });
+            });
+            document.getElementById('stat-total-income').textContent = fmt(totalInc);
+            document.getElementById('stat-total-expenses').textContent = fmt(totalExp);
+            const bal = totalInc - totalExp;
+            const balEl = document.getElementById('stat-net-balance');
+            balEl.textContent = fmt(bal);
+            balEl.style.color = bal >= 0 ? '#059669' : '#e11d48';
+        }
+
+        function handleKeyNav(event, el) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const inputs = Array.from(el.closest('tbody')?.querySelectorAll('input[type="number"]') || []);
+                const idx = inputs.indexOf(el);
+                el.blur();
+                if (idx >= 0 && idx < inputs.length - 1) {
+                    inputs[idx + 1].focus();
+                    inputs[idx + 1].select();
+                }
+            }
+        }
+
+        function updatePeriodName(pid, val) {
+            const p = state.periods.find(x => x.id === pid);
+            if (p) { p.name = val || p.name; saveState(); refreshTotals(); }
+        }
+
+        let dateModalPeriodId = null;
+
+        function openDateModal(pid) {
+            dateModalPeriodId = pid;
+            const p = state.periods.find(x => x.id === pid);
+            document.getElementById('modal-date-start').value = '';
+            document.getElementById('modal-date-end').value = '';
+            if (p && p.date) {
+                const d = p.date.trim();
+                const rangeMatch = d.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*[-–]\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (rangeMatch) {
+                    document.getElementById('modal-date-start').value = `${rangeMatch[3]}-${rangeMatch[1].padStart(2,'0')}-${rangeMatch[2].padStart(2,'0')}`;
+                    document.getElementById('modal-date-end').value = `${rangeMatch[6]}-${rangeMatch[4].padStart(2,'0')}-${rangeMatch[5].padStart(2,'0')}`;
+                } else {
+                    const singleMatch = d.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                    if (singleMatch) {
+                        document.getElementById('modal-date-start').value = `${singleMatch[3]}-${singleMatch[1].padStart(2,'0')}-${singleMatch[2].padStart(2,'0')}`;
+                    }
+                }
+            }
+            new bootstrap.Modal(document.getElementById('dateRangeModal')).show();
+        }
+
+        function saveDateModal() {
+            const startInput = document.getElementById('modal-date-start');
+            const endInput = document.getElementById('modal-date-end');
+            if (!startInput.value) return;
+            const sp = startInput.value.split('-');
+            const startFmt = `${sp[1]}/${sp[2]}/${sp[0]}`;
+            let dateStr = startFmt;
+            if (endInput.value) {
+                const ep = endInput.value.split('-');
+                dateStr = `${startFmt} - ${ep[1]}/${ep[2]}/${ep[0]}`;
+            }
+            const p = state.periods.find(x => x.id === dateModalPeriodId);
+            if (p) { p.date = dateStr; saveState(); render(); }
+            bootstrap.Modal.getInstance(document.getElementById('dateRangeModal')).hide();
+        }
+
+        function clearDateModal() {
+            const p = state.periods.find(x => x.id === dateModalPeriodId);
+            if (p) { p.date = ''; saveState(); render(); }
+            bootstrap.Modal.getInstance(document.getElementById('dateRangeModal')).hide();
+        }
+
+        function addPeriod() {
+            state.periods.push({ id: Date.now(), name: "New Period", date: "", income: [{ id: 'n' + (nextId++), label: "New Income", est: 0, act: 0 }], expenses: [{ id: 'n' + (nextId++), label: "New Item", est: 0, act: 0 }] });
+            saveState(); render();
+        }
+
+        function removePeriod(pid) {
+            if (!confirm('Remove this period?')) return;
+            state.periods = state.periods.filter(p => p.id !== pid);
+            saveState(); render();
+        }
+
+        function updateValue(pid, type, iid, field, val) {
+            const p = state.periods.find(x => x.id === pid);
+            if (!p) return;
+            const list = type === 'income' ? p.income : p.expenses;
+            const item = list.find(x => x.id === iid);
+            if (!item) return;
+            if (field === 'label') item.label = val;
+            else item[field] = parseFloat(val) || 0;
+            saveState(); refreshTotals();
+        }
+
+        function addItem(pid, type) {
+            const p = state.periods.find(x => x.id === pid);
+            if (!p) return;
+            const list = type === 'income' ? p.income : p.expenses;
+            list.push({ id: 'n' + (nextId++), label: type === 'income' ? "New Income" : "New Item", est: 0, act: 0 });
+            saveState(); render();
+        }
+
+        function addBillItem(pid, billId) {
+            const p = state.periods.find(x => x.id === pid);
+            if (!p) return;
+            const bill = serverBills.find(b => b.id === billId);
+            if (!bill) return;
+            p.expenses.push({ id: 'n' + (nextId++), label: bill.payee_name || 'Unknown', est: bill.amount || 0, act: 0 });
+            saveState(); render();
+        }
+
+        function deleteItem(pid, type, iid) {
+            if (!confirm('Delete this item?')) return;
+            const p = state.periods.find(x => x.id === pid);
+            if (!p) return;
+            const list = type === 'income' ? p.income : p.expenses;
+            p[type === 'income' ? 'income' : 'expenses'] = list.filter(x => x.id !== iid);
+            saveState(); render();
+        }
+
+        function resetToDefault() {
+            if (!confirm('Reset to defaults? Your edits will be lost.')) return;
+            localStorage.removeItem('interactiveBudgetBi');
+            state = buildDefaultState();
+            saveState(); render();
+        }
+
+        // --- RENDER ---
+        function render() {
+            const filter = (document.getElementById('filter-input').value || '').toLowerCase();
+            let totalInc = 0, totalExp = 0;
+
+            const container = document.getElementById('periods-container');
+            container.innerHTML = state.periods.map(p => {
+                const pInc = p.income.reduce((s, i) => s + i.act, 0);
+                const pExp = p.expenses.reduce((s, i) => s + i.act, 0);
+                const pIncEst = p.income.reduce((s, i) => s + i.est, 0);
+                const pExpEst = p.expenses.reduce((s, i) => s + i.est, 0);
+                totalInc += pInc;
+                totalExp += pExp;
+
+                const incRows = p.income.filter(i => !filter || i.label.toLowerCase().includes(filter)).map(i => `
+                    <tr>
+                        <td class="px-4 py-2 font-medium" contenteditable="true" onblur="updateValue(${p.id},'income','${i.id}','label',this.innerText)" onkeydown="if(event.key==='Enter'){event.preventDefault();const n=this.closest('tr')?.querySelector('input[type=\"number\"]');if(n){n.focus();n.select()}else this.blur()}">${i.label}</td>
+                        <td class="text-end px-4 py-2"><input type="number" step="0.01" value="${i.est}" data-pid="${p.id}" data-type="income" data-iid="${i.id}" data-field="est" onchange="updateValue(${p.id},'income','${i.id}','est',this.value)" onkeydown="handleKeyNav(event,this)" onfocus="this.select()"></td>
+                        <td class="text-end px-4 py-2"><input type="number" step="0.01" value="${i.act}" data-pid="${p.id}" data-type="income" data-iid="${i.id}" data-field="act" onchange="updateValue(${p.id},'income','${i.id}','act',this.value)" onkeydown="handleKeyNav(event,this)" onfocus="this.select()"></td>
+                        <td class="text-end px-4 py-2 font-semibold ${i.act - i.est >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${fmt(i.act - i.est)}</td>
+                        <td class="text-end px-4 py-2 no-print"><button onclick="deleteItem(${p.id},'income','${i.id}')" class="btn btn-sm text-slate-500 hover:text-rose-500 p-0 border-0 bg-transparent"><i class="bi bi-trash3"></i></button></td>
+                    </tr>`).join('');
+
+                const expRows = p.expenses.filter(i => !filter || i.label.toLowerCase().includes(filter)).map(i => `
+                    <tr>
+                        <td class="px-4 py-2">
+                            <input list="payee-datalist" class="expense-label-input" value="${i.label}" data-pid="${p.id}" data-type="expenses" data-iid="${i.id}" data-field="label" onblur="updateValue(${p.id},'expenses','${i.id}','label',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();const n=this.closest('tr')?.querySelector('input[type=\"number\"]');if(n){n.focus();n.select()}else this.blur()}">
+                        </td>
+                        <td class="text-end px-4 py-2"><input type="number" step="0.01" value="${i.est}" data-pid="${p.id}" data-type="expenses" data-iid="${i.id}" data-field="est" onchange="updateValue(${p.id},'expenses','${i.id}','est',this.value)" onkeydown="handleKeyNav(event,this)" onfocus="this.select()"></td>
+                        <td class="text-end px-4 py-2"><input type="number" step="0.01" value="${i.act}" data-pid="${p.id}" data-type="expenses" data-iid="${i.id}" data-field="act" onchange="updateValue(${p.id},'expenses','${i.id}','act',this.value)" onkeydown="handleKeyNav(event,this)" onfocus="this.select()"></td>
+                        <td class="text-end px-4 py-2 font-semibold ${i.est - i.act >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${fmt(i.est - i.act)}</td>
+                        <td class="text-end px-4 py-2 no-print"><button onclick="deleteItem(${p.id},'expenses','${i.id}')" class="btn btn-sm text-slate-500 hover:text-rose-500 p-0 border-0 bg-transparent"><i class="bi bi-trash3"></i></button></td>
+                    </tr>`).join('');
+
+                const periodFiltered = filter && !p.name.toLowerCase().includes(filter) && !p.date.toLowerCase().includes(filter) && !incRows && !expRows;
+                if (filter && periodFiltered) return '';
+
+                return `
+                    <div class="card mb-4" data-pid="${p.id}">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <h5 class="mb-0">
+                                    <span contenteditable="true" onblur="updatePeriodName(${p.id},this.innerText)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${p.name}</span>
+                                </h5>
+                                <button onclick="openDateModal(${p.id})" class="badge btn border-0 p-1" style="background: #6366f1; color: #fff; cursor: pointer;">${p.date ? p.date : '<i class="bi bi-calendar3 me-1"></i> Set Date'}</button>
+                            </div>
+                            <div class="d-flex gap-3 align-items-center flex-wrap">
+                                <small class="text-muted">Inc: ${fmt(pIncEst)} est / ${fmt(pInc)} act</small>
+                                <small class="text-muted">|</small>
+                                <small class="text-muted">Exp: ${fmt(pExpEst)} est / ${fmt(pExp)} act</small>
+                                <button onclick="removePeriod(${p.id})" class="btn btn-sm text-muted p-0 border-0 bg-transparent" title="Remove period"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="row g-0">
+                                <div class="col-12 col-lg-6 border-bottom border-lg-bottom-0 border-lg-end">
+                                    <div class="p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="mb-0"><i class="bi bi-arrow-up-circle text-emerald-500 me-1"></i> Income</h6>
+                                            <button onclick="addItem(${p.id},'income')" class="btn btn-sm btn-outline-success border-0 p-0">+ Add</button>
+                                        </div>
+                                        <div class="table-responsive"><table class="table table-sm table-borderless mb-0 align-middle">
+                                             <thead><tr class="text-muted small">
+                                                 <th class="px-2 py-1">Source</th>
+                                                 <th class="text-end px-2 py-1">Est.</th>
+                                                 <th class="text-end px-2 py-1">Actual</th>
+                                                 <th class="text-end px-2 py-1">Diff</th>
+                                                 <th class="no-print px-2 py-1"></th>
+                                             </tr></thead>
+                                             <tbody>${incRows || '<tr><td colspan="5" class="text-center text-muted py-3 small">No items match filter</td></tr>'}</tbody>
+                                             <tfoot><tr class="fw-bold"><td class="px-2 py-2">Total</td>
+                                             <td class="text-end px-2 py-2">${fmt(p.income.reduce((s,i) => s + i.est, 0))}</td>
+                                             <td class="text-end px-2 py-2">${fmt(pInc)}</td>
+                                             <td class="text-end px-2 py-2">${fmt(pInc - p.income.reduce((s,i) => s + i.est, 0))}</td>
+                                             <td class="no-print"></td></tr></tfoot>
+                                         </table></div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <div class="p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="mb-0"><i class="bi bi-arrow-down-circle text-rose-500 me-1"></i> Expenses</h6>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-info border-0 p-0 dropdown-toggle" data-bs-toggle="dropdown" title="Add from Bills"><i class="bi bi-journal-text me-1"></i>Bills</button>
+                                                    <ul class="dropdown-menu dropdown-menu-end" style="max-height: 300px; overflow-y: auto;">
+                                                        ${(() => {
+                                                            const periodBills = billsInPeriod(p);
+                                                            if (!getPeriodDateRange(p)) return '<li><span class="dropdown-item-text small text-muted">Set a period date first</span></li>';
+                                                            if (!periodBills.length) return '<li><span class="dropdown-item-text small text-muted">No bills in this period</span></li>';
+                                                            return periodBills.map(b => `<li><a class="dropdown-item small d-flex justify-content-between gap-2" href="#" onclick="addBillItem(${p.id},${b.id})"><span>${b.payee_name || b.notes || 'Unknown'}</span><span class="text-muted flex-shrink-0" style="min-width: 120px; text-align: right;">${b.due_date ? b.due_date.slice(5) : ''}&nbsp;${fmt(b.amount)}</span></a></li>`).join('');
+                                                        })()}
+                                                    </ul>
+                                                </div>
+                                                <button onclick="addItem(${p.id},'expenses')" class="btn btn-sm btn-outline-danger border-0 p-0">+ Add</button>
+                                            </div>
+                                        </div>
+                                        <div class="table-responsive"><table class="table table-sm table-borderless mb-0 align-middle">
+                                             <thead><tr class="text-muted small">
+                                                 <th class="px-2 py-1">Item</th>
+                                                 <th class="text-end px-2 py-1">Est.</th>
+                                                 <th class="text-end px-2 py-1">Actual</th>
+                                                 <th class="text-end px-2 py-1">Diff</th>
+                                                 <th class="no-print px-2 py-1"></th>
+                                             </tr></thead>
+                                             <tbody>${expRows || '<tr><td colspan="5" class="text-center text-muted py-3 small">No items match filter</td></tr>'}</tbody>
+                                             <tfoot><tr class="fw-bold"><td class="px-2 py-2">Total</td>
+                                             <td class="text-end px-2 py-2">${fmt(p.expenses.reduce((s,i) => s + i.est, 0))}</td>
+                                             <td class="text-end px-2 py-2">${fmt(pExp)}</td>
+                                             <td class="text-end px-2 py-2">${fmt(p.expenses.reduce((s,i) => s + i.est, 0) - pExp)}</td>
+                                             <td class="no-print"></td></tr></tfoot>
+                                         </table></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            refreshTotals();
+
+            const filterVal = document.getElementById('filter-input').value.trim();
+            document.getElementById('filter-totals').textContent = filterVal ? `Filter applied — showing ${document.querySelectorAll('#periods-container .card').length} period(s)` : '';
+        }
+
+        render();
+
+        // Process any paid bills synced from the Bills page
+        if (pendingBudgetSync && pendingBudgetSync.length) {
+            let added = 0;
+            pendingBudgetSync.forEach(entry => {
+                const billId = typeof entry === 'object' ? entry.id : entry;
+                const dueDateOverride = typeof entry === 'object' ? entry.due_date : null;
+                const bill = serverBills.find(b => b.id === billId);
+                if (!bill) return;
+                const period = findPeriodForDate(dueDateOverride || bill.due_date);
+                if (!period) return;
+                const exists = period.expenses.some(e => e.label === (bill.payee_name || 'Unknown') && e.est === (bill.amount || 0));
+                if (exists) return;
+                period.expenses.push({ id: 'n' + (nextId++), label: bill.payee_name || bill.notes || 'Unknown', est: bill.amount || 0, act: bill.amount || 0 });
+                added++;
+            });
+            if (added) {
+                saveState();
+                render();
+                const container = document.querySelector('.ib-content');
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show';
+                alert.innerHTML = `<i class="bi bi-check-circle"></i> Added ${added} paid bill(s) to your budget. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+                container.insertBefore(alert, container.firstChild);
+                setTimeout(() => { try { alert.remove(); } catch(e) {} }, 6000);
+            }
+        }
+
+        function findPeriodForDate(dueDateStr) {
+            if (!dueDateStr || !state.periods.length) return state.periods[0];
+            const due = new Date(dueDateStr + 'T00:00:00');
+            if (isNaN(due.getTime())) return state.periods[state.periods.length - 1];
+            let best = null, bestDist = Infinity;
+            state.periods.forEach(p => {
+                if (!p.date || !p.date.trim()) return;
+                const d = p.date.trim();
+                const rangeMatch = d.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*[-–]\s*(\d{1,2}\/\d{1,2}\/\d{4})/);
+                if (rangeMatch) {
+                    const start = parseMDY(rangeMatch[1]);
+                    const end = parseMDY(rangeMatch[2]);
+                    if (start && end && due >= start && due <= end) {
+                        best = p; bestDist = 0;
+                    }
+                    return;
+                }
+                const single = parseMDY(d);
+                if (single) {
+                    const dist = Math.abs(due - single);
+                    if (dist < bestDist) { bestDist = dist; best = p; }
+                }
+            });
+            return best || state.periods[state.periods.length - 1];
+        }
+    </script>
+    <script>
+        function toggleTheme() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            var next = current === 'light' ? 'dark' : 'light';
+            applyTheme(next, true);
+        }
+        function applyTheme(theme, save) {
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.documentElement.style.colorScheme = 'light';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                document.documentElement.style.colorScheme = 'dark';
+            }
+            if (save) localStorage.setItem('theme', theme);
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.content = theme === 'light' ? '#ffffff' : '#0A0A0B';
+            var isLight = theme === 'light';
+            var iconEls = document.querySelectorAll('.theme-toggle-icon');
+            var labelEls = document.querySelectorAll('[id^="themeLabel"]');
+            iconEls.forEach(function(el) {
+                el.className = isLight ? 'bi bi-moon-fill theme-toggle-icon' : 'bi bi-sun-fill theme-toggle-icon';
+            });
+            labelEls.forEach(function(el) { el.textContent = isLight ? 'Dark' : 'Light'; });
+        }
+        var savedTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(savedTheme, false);
+    </script>
+</body>
+</html>

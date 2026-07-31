@@ -9,30 +9,58 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="bi bi-bank"></i> Your Bank Accounts</h5>
-                <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-circle"></i> Add Account
-                </a>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-arrow-repeat"></i> Sync
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><button class="dropdown-item" onclick="syncPlaid('balances')"><i class="bi bi-wallet2"></i> Sync Balances</button></li>
+                            <li><button class="dropdown-item" onclick="syncPlaid('transactions')"><i class="bi bi-list-ol"></i> Sync Transactions</button></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline-info btn-sm" onclick="openPlaidLink(this)" data-original-text="Link Bank">
+                        <i class="bi bi-plug"></i> Link Bank
+                    </button>
+                    <a href="{{ url_for('add_bank_account_form') }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> Add Account
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 {% if accounts %}
-                    <div class="row g-3">
-                        {% for account in accounts %}
+                    {% for group_name, group_accounts in accounts|groupby('institution') %}
+                    {% set group_name = group_name or 'Other' %}
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            {% set inst_key = group_name.lower().strip() %}
+                            {% set logo = logo_map.get(inst_key, {}) %}
+                            {% if logo.get('small') %}
+                                <img src="/static/images/{{ logo['small'] }}" alt="{{ group_name }}" style="height: 40px; width: 40px; border-radius: 50%; object-fit: cover;">
+                            {% else %}
+                                <i class="bi bi-bank fs-5"></i>
+                            {% endif %}
+                            <h5 class="mb-0">{{ group_name }}</h5>
+                        </div>
+                        <div class="row g-3">
+                        {% for account in group_accounts %}
+                            {% set inst_key = (account.institution or '').lower().strip() %}
+                            {% set logo = logo_map.get(inst_key, {}) %}
+                            {% set bg_style = ('background:url(/static/images/' + logo['bg'] + ') center/cover;color:#fff') if logo.get('bg') else '' %}
                             <div class="col-12 col-sm-6">
-                                <div class="account-card h-100" {% if account.institution == 'First Tech Credit Union' %}style="background: url('/static/images/firsttech_logo_bg.png') center/cover; color: #fff;"{% elif account.institution == 'PNC Bank' %}style="background: url('/static/images/pnc_bg.png') center/cover; color: #fff;"{% endif %}>
+                                <div class="account-card h-100" {% if logo.get('bg') %}style="{{ bg_style }}"{% endif %}>
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <div>
                                             <h5 class="mb-0">
-<a href="#" onclick="editAccount({{ account.id }}); return false;" class="text-decoration-none text-reset">
-                                                    {% if account.institution == 'First Tech Credit Union' %}
-                                                        <img src="/static/images/firsttech_logo_noname_20x20.png" alt="First Tech" style="height: 30px; width: auto; vertical-align: middle;"> {{ account.name }}
-                                                    {% elif account.institution == 'PNC Bank' %}
-                                                        <img src="/static/images/pnc_noname_20x20.png" alt="PNC" style="height: 30px; width: auto; vertical-align: middle;"> {{ account.name }}
+<a href="#" onclick="editAccount({{ account.id }}); return false;" class="text-decoration-none {{ 'text-reset' if logo.get('bg') else '' }}">
+                                                    {% if logo.get('small') %}
+                                                        <img src="/static/images/{{ logo['small'] }}" alt="{{ account.institution }}" style="height: 44px; width: 44px; border-radius: 50%; object-fit: cover; vertical-align: middle;"> {{ account.name }}
                                                     {% else %}
                                                         <i class="bi bi-{{ 'wallet' if account.account_type == 'checking' else 'piggy-bank' if account.account_type == 'savings' else 'graph-up' }}"></i> {{ account.name }}
                                                     {% endif %}
                                                 </a>
                                             </h5>
-                                            <small class="{{ 'text-light' if account.id == 8 else 'text-muted' }}">{{ account.institution or 'Unknown Institution' }}</small>
+                                            <small class="{{ 'text-light' if logo.get('bg') else 'text-muted' }}">{{ account.institution or 'Unknown Institution' }}</small>
                                         </div>
                                         <div class="dropdown">
                                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
@@ -40,6 +68,7 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li><a class="dropdown-item" href="#" onclick="editAccount({{ account.id }})"><i class="bi bi-pencil"></i> Edit</a></li>
+                                                <li><a class="dropdown-item text-warning" href="{{ url_for('clear_bank_account_plaid', id=account.id) }}" onclick="return confirm('Clear balance &amp; transactions for fresh Plaid sync?')"><i class="bi bi-arrow-counterclockwise"></i> Clear Plaid</a></li>
                                                 <li><a class="dropdown-item text-danger" href="{{ url_for('delete_bank_account', id=account.id) }}" onclick="return confirm('Delete this account?')"><i class="bi bi-trash"></i> Delete</a></li>
                                             </ul>
                                         </div>
@@ -52,17 +81,20 @@
                                     </div>
                                     <hr>
                                     <div class="balance-display">
-                                        <small class="{{ 'text-light' if account.id == 8 else 'text-muted' }}">Current Balance</small>
+                                        <small class="{{ 'text-light' if logo.get('bg') else 'text-muted' }}">Current Balance</small>
                                         <h3 class="mb-0" style="{% if account.current_balance < 0 %}color: #EF4444;{% endif %}">
                                             ${{ "%.2f"|format(account.current_balance) }}
                                         </h3>
+                                        {% if account.account_type == 'loan' and account.interest_rate %}
+                                        <small class="{{ 'text-light' if logo.get('bg') else 'text-muted' }}">APR: {{ "%.2f"|format(account.interest_rate) }}%</small>
+                                        {% endif %}
                                     </div>
                                     <div class="mt-2 d-flex gap-3">
-                                        <a href="{{ url_for('transactions', account_id=account.id) }}" class="text-decoration-none {{ 'text-light' if account.id == 8 else '' }}">
+                                        <a href="{{ url_for('transactions', account_id=account.id) }}" class="text-decoration-none {{ 'text-light' if logo.get('bg') else '' }}">
                                             <i class="bi bi-list-ol"></i> Transactions
                                         </a>
                                         {% if account.website %}
-                                        <a href="{{ account.website }}" target="_blank" class="text-decoration-none {{ 'text-light' if account.id == 8 else '' }}">
+                                        <a href="{{ account.website }}" target="_blank" class="text-decoration-none {{ 'text-light' if logo.get('bg') else '' }}">
                                             <i class="bi bi-box-arrow-up-right"></i> Login
                                         </a>
                                         {% endif %}
@@ -70,7 +102,9 @@
                                 </div>
                             </div>
                         {% endfor %}
+                        </div>
                     </div>
+                    {% endfor %}
                 {% else %}
                     <p class="text-muted text-center py-4">No bank accounts added yet. <a href="{{ url_for('add_bank_account_form') }}">Add your first account</a></p>
                 {% endif %}
@@ -120,9 +154,9 @@
                     <div class="mb-3">
                         <label class="form-label">Account Type</label>
                         <select name="account_type" id="editAccountType" class="form-select">
-                            <option value="checking">Checking</option>
-                            <option value="savings">Savings</option>
-                            <option value="investment">Investment</option>
+                            {% for val, label in account_type_options %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
@@ -140,6 +174,13 @@
                     <div class="mb-3">
                         <label class="form-label">Website (Optional)</label>
                         <input type="url" name="website" id="editAccountWebsite" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="mb-3" id="editInterestRateGroup">
+                        <label class="form-label">Interest Rate (APR) <small class="text-muted">for loans</small></label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" name="interest_rate" id="editAccountInterestRate" class="form-control" value="0">
+                            <span class="input-group-text">%</span>
+                        </div>
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" name="is_income_account" id="editAccountIsIncome">
@@ -167,7 +208,15 @@ function editAccount(id) {
             document.getElementById('editAccountBalance').value = data.current_balance || 0;
             document.getElementById('editAccountWebsite').value = data.website || '';
             document.getElementById('editAccountIsIncome').checked = data.is_income_account == 1;
+            document.getElementById('editAccountInterestRate').value = data.interest_rate || 0;
             document.getElementById('editAccountForm').action = `/update_bank_account/${id}`;
+            var editTypeSelect = document.getElementById('editAccountType');
+            var editRateGroup = document.getElementById('editInterestRateGroup');
+            function toggleEditRate() {
+                editRateGroup.style.display = editTypeSelect.value === 'loan' ? '' : 'none';
+            }
+            toggleEditRate();
+            editTypeSelect.addEventListener('change', toggleEditRate);
             new bootstrap.Modal(document.getElementById('editAccountModal')).show();
         });
 }

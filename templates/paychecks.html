@@ -760,7 +760,7 @@ async function showPaystub(id) {
                     <tbody>
                       ${pc.salary ? `<tr>
                         <td>Salary</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>${(pc.hours_worked || 0).toFixed(0)}</td>
                         <td>—</td>
                         <td>${fmtCurrency(pc.salary)}</td>
@@ -768,7 +768,7 @@ async function showPaystub(id) {
                       </tr>` : ''}
                       ${pc.vacation_pay && pc.vacation_pay > 0 ? `<tr>
                         <td>Vacation</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>${vacationHours}</td>
                         <td>$${vacationRate.toFixed(4)}</td>
                         <td>${fmtCurrency(pc.vacation_pay)}</td>
@@ -776,7 +776,7 @@ async function showPaystub(id) {
                       </tr>` : ''}
                       ${pc.holiday_pay && pc.holiday_pay > 0 ? `<tr>
                         <td>Holiday</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>—</td>
                         <td>—</td>
                         <td>${fmtCurrency(pc.holiday_pay)}</td>
@@ -784,7 +784,7 @@ async function showPaystub(id) {
                       </tr>` : ''}
                       ${pc.floating_holiday && pc.floating_holiday > 0 ? `<tr>
                         <td>Floating Holiday</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>—</td>
                         <td>—</td>
                         <td>${fmtCurrency(pc.floating_holiday)}</td>
@@ -792,7 +792,7 @@ async function showPaystub(id) {
                       </tr>` : ''}
                       ${pc.biometric_credit && pc.biometric_credit > 0 ? `<tr>
                         <td>Biometric Credit</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>—</td>
                         <td>—</td>
                         <td>${fmtCurrency(pc.biometric_credit)}</td>
@@ -800,7 +800,7 @@ async function showPaystub(id) {
                       </tr>` : ''}
                       ${pc.spousal_biometric && pc.spousal_biometric > 0 ? `<tr>
                         <td>Spousal Biometric Credit</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>—</td>
                         <td>—</td>
                         <td>${fmtCurrency(pc.spousal_biometric)}</td>
@@ -808,7 +808,7 @@ async function showPaystub(id) {
                       </tr>` : ''}
                       ${pc.group_term_life && pc.group_term_life > 0 ? `<tr>
                         <td>Group Term Life</td>
-                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:#6b6558">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
+                        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;" class="text-muted">${formatDate(pc.pay_period_begin)} – ${formatDate(pc.pay_period_end)}</td>
                         <td>—</td>
                         <td>—</td>
                         <td>${fmtCurrency(pc.group_term_life)}</td>

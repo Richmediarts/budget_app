@@ -19,6 +19,9 @@
                     <a href="{{ url_for('add_bill_form') }}" class="btn btn-sm btn-primary">
                         <i class="bi bi-plus-circle"></i> Add New Bill
                     </a>
+                    <a href="{{ url_for('export_bills_text') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download"></i> Download Text
+                    </a>
                 </div>
 
                 {% if grouped_months %}
@@ -26,13 +29,13 @@
                         {% for month in grouped_months %}
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#month{{ loop.index }}" aria-expanded="false">
+                                    <button class="accordion-button {% if month.month_key != current_month %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#month{{ loop.index }}" aria-expanded="{% if month.month_key == current_month %}true{% else %}false{% endif %}">
                                         <strong>{{ month.label }}</strong>
                                         <span class="ms-3 text-muted">({{ month.period_count }} pay periods)</span>
                                         <span class="ms-auto me-3 fw-bold">${{ "%.2f"|format(month.total) }}</span>
                                     </button>
                                 </h2>
-                                <div id="month{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#billsAccordion">
+                                <div id="month{{ loop.index }}" class="accordion-collapse collapse {% if month.month_key == current_month %}show{% endif %}" data-bs-parent="#billsAccordion">
                                     <div class="accordion-body p-0">
                                         {% for period in month.periods_list %}
                                             <div class="border-bottom">
@@ -45,6 +48,7 @@
                                                         <table class="table table-hover mb-0 period-table">
                                                             <thead>
                                                                 <tr>
+                                                                    <th style="width: 40px;"></th>
                                                                     <th>Payee</th>
                                                                     <th>Amount</th>
                                                                     <th>Due Date</th>
@@ -59,15 +63,26 @@
                                                                     {% set today = datetime.now().date() %}
                                                                     {% set days_until = (due_date - today).days %}
                                                                     <tr data-bill-id="{{ bill.id }}" class="{% if bill.is_paid %}table-success{% elif days_until < 0 %}table-danger{% elif days_until <= 3 %}table-warning{% endif %}">
-                                                                        <td>
+                                                                        <td class="text-center" data-label="">
+                                                                            {% if not bill.get('is_cc_bill') %}
+                                                                            <button class="btn btn-sm p-0 border-0 bg-transparent" onclick="toggleBillPaid({{ bill.id }}, {{ 'true' if bill.is_paid else 'false' }})" title="{% if bill.is_paid %}Mark unpaid{% else %}Mark paid{% endif %}">
+                                                                                {% if bill.is_paid %}
+                                                                                    <i class="bi bi-check-circle-fill" style="color: var(--primary); font-size: 1.25rem;"></i>
+                                                                                {% else %}
+                                                                                    <i class="bi bi-circle text-muted" style="font-size: 1.25rem;"></i>
+                                                                                {% endif %}
+                                                                            </button>
+                                                                            {% endif %}
+                                                                        </td>
+                                                                        <td data-label="Payee">
                                                                             <strong>{{ bill.payee_name or 'Unknown Payee' }}</strong>
                                                                             {% if bill.payee_category %}
                                                                                 <br><small class="text-muted">{{ bill.payee_category }}</small>
                                                                             {% endif %}
                                                                         </td>
-                                                                        <td class="fw-bold">${{ "%.2f"|format(bill.amount) }}</td>
-                                                                        <td>{{ bill.due_date }}</td>
-                                                                        <td>
+                                                                        <td data-label="Amount" class="fw-bold">${{ "%.2f"|format(bill.amount) }}</td>
+                                                                        <td data-label="Due Date">{{ bill.due_date }}</td>
+                                                                        <td data-label="Status">
                                                                             {% if bill.is_paid %}
                                                                                 <span class="badge bg-success">Paid</span>
                                                                                 {% if bill.paid_date %}
@@ -81,7 +96,7 @@
                                                                                 <span class="badge bg-secondary">Pending</span>
                                                                             {% endif %}
                                                                         </td>
-                                                                        <td>
+                                                                        <td data-label="Due In">
                                                                             {% if bill.is_paid %}
                                                                                 <span class="badge" style="background: var(--primary); color: #000;">Paid</span>
                                                                             {% elif days_until < 0 %}
@@ -92,19 +107,9 @@
                                                                                 <span class="badge" style="background: #52525b; color: #fff;">{{ days_until }} days</span>
                                                                             {% endif %}
                                                                         </td>
-                                                                        <td class="text-end">
+                                                                        <td data-label="" class="text-end">
+                                                                            {% if not bill.get('is_cc_bill') %}
                                                                             <div class="btn-group btn-group-sm">
-                                                                                {% if not bill.is_paid %}
-                                                                                    <form action="{{ url_for('mark_bill_paid', id=bill.id) }}" method="POST" style="display:inline;">
-                                                                                        <button type="submit" class="btn btn-success" onclick="return confirm('Mark as paid?')">
-                                                                                            <i class="bi bi-check-circle"></i>
-                                                                                        </button>
-                                                                                    </form>
-                                                                                {% else %}
-                                                                                    <a href="{{ url_for('mark_bill_unpaid', id=bill.id) }}" class="btn btn-secondary">
-                                                                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                                                                    </a>
-                                                                                {% endif %}
                                                                                 <button class="btn btn-primary" onclick="editBill({{ bill.id }})">
                                                                                     <i class="bi bi-pencil"></i>
                                                                                 </button>
@@ -112,12 +117,14 @@
                                                                                     <i class="bi bi-trash"></i>
                                                                                 </a>
                                                                             </div>
+                                                                            {% endif %}
                                                                         </td>
                                                                     </tr>
                                                                 {% endfor %}
                                                             </tbody>
                                                             <tfoot>
                                                                 <tr style="border-top: 2px solid var(--primary);">
+                                                                    <td></td>
                                                                     <td><strong>Period Total</strong></td>
                                                                     <td class="fw-bold fs-5">${{ "%.2f"|format(period.total) }}</td>
                                                                     <td></td>
@@ -253,7 +260,7 @@ function editBill(id) {
                                 <label class="form-label">Amount Due</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" name="amount" class="form-control" required value="${bill.amount}">
+                                    <input type="number" step="0.01" name="amount" class="form-control" value="${bill.amount}">
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -305,16 +312,41 @@ function editBill(id) {
     modalInstance.show();
 }
 
-function markPaid(event, id) {
-    event.preventDefault();
-    fetch('/mark_bill_paid/' + id, {
-        method: 'POST'
-    })
+function toggleBillPaid(id, isCurrentlyPaid) {
+    const url = isCurrentlyPaid ? '/mark_bill_unpaid/' + id : '/mark_bill_paid/' + id;
+    const method = isCurrentlyPaid ? 'GET' : 'POST';
+    fetch(url, { method: method })
         .then(() => window.location.reload())
-        .catch(err => {
-            window.location.href = '/mark_bill_paid/' + id;
-        });
+        .catch(() => { window.location.href = url; });
 }
+
+// Always auto-expand current month accordion
+document.addEventListener('DOMContentLoaded', function() {
+    const currentMonth = '{{ current_month }}';
+    if (!currentMonth) return;
+    const items = document.querySelectorAll('#billsAccordion .accordion-item');
+    items.forEach(function(item) {
+        const btn = item.querySelector('.accordion-button');
+        if (!btn) return;
+        const strong = btn.querySelector('strong');
+        if (!strong) return;
+        // Find the month item whose label ends with the current month/year
+        // The label format is "Month YYYY", current_month is "YYYY-MM"
+        const monthNum = parseInt(currentMonth.split('-')[1]);
+        const year = currentMonth.split('-')[0];
+        const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+        const targetLabel = months[monthNum] + ' ' + year;
+        if (strong.textContent.trim() === targetLabel) {
+            const collapseEl = document.getElementById(btn.getAttribute('data-bs-target')?.substring(1));
+            if (collapseEl && !collapseEl.classList.contains('show')) {
+                collapseEl.classList.add('show');
+                btn.classList.remove('collapsed');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        }
+    });
+});
 
 // Auto-expand accordion and scroll to bill if bill_id is in URL
 const urlParams = new URLSearchParams(window.location.search);

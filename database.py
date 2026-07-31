@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 
 import os
-DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'budget.db')
+DATABASE = os.environ.get('BUDGET_DB_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'budget.db')
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -114,6 +114,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS bills (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             payee_id INTEGER,
+            payee_name TEXT,
             amount REAL DEFAULT 0,
             due_date TEXT NOT NULL,
             is_paid INTEGER DEFAULT 0,
@@ -149,6 +150,14 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL
         );
+        
+        CREATE TABLE IF NOT EXISTS plaid_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            access_token TEXT NOT NULL,
+            item_id TEXT,
+            institution_name TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
     
     cursor.execute("PRAGMA table_info(paychecks)")
@@ -165,6 +174,48 @@ def init_db():
     if 'account' not in bills_cols:
         try:
             cursor.execute('ALTER TABLE bills ADD COLUMN account TEXT')
+        except:
+            pass
+    if 'payee_name' not in bills_cols:
+        try:
+            cursor.execute('ALTER TABLE bills ADD COLUMN payee_name TEXT')
+            cursor.execute('UPDATE bills SET payee_name = (SELECT name FROM payees WHERE payees.id = bills.payee_id) WHERE payee_id IS NOT NULL')
+        except:
+            pass
+    if 'credit_card_id' not in bills_cols:
+        try:
+            cursor.execute('ALTER TABLE bills ADD COLUMN credit_card_id INTEGER')
+        except:
+            pass
+    
+    cursor.execute("PRAGMA table_info(bank_accounts)")
+    ba_cols = [col[1] for col in cursor.fetchall()]
+    if 'plaid_account_id' not in ba_cols:
+        try:
+            cursor.execute('ALTER TABLE bank_accounts ADD COLUMN plaid_account_id TEXT')
+        except:
+            pass
+    if 'plaid_item_id' not in ba_cols:
+        try:
+            cursor.execute('ALTER TABLE bank_accounts ADD COLUMN plaid_item_id INTEGER')
+        except:
+            pass
+    if 'interest_rate' not in ba_cols:
+        try:
+            cursor.execute('ALTER TABLE bank_accounts ADD COLUMN interest_rate REAL DEFAULT 0')
+        except:
+            pass
+    
+    cursor.execute("PRAGMA table_info(credit_cards)")
+    cc_cols = [col[1] for col in cursor.fetchall()]
+    if 'plaid_account_id' not in cc_cols:
+        try:
+            cursor.execute('ALTER TABLE credit_cards ADD COLUMN plaid_account_id TEXT')
+        except:
+            pass
+    if 'plaid_item_id' not in cc_cols:
+        try:
+            cursor.execute('ALTER TABLE credit_cards ADD COLUMN plaid_item_id INTEGER')
         except:
             pass
     
@@ -234,6 +285,11 @@ def init_db():
             cursor.execute('ALTER TABLE payees ADD COLUMN website TEXT')
         except:
             pass
+    if 'default_category_id' not in payees_cols:
+        try:
+            cursor.execute('ALTER TABLE payees ADD COLUMN default_category_id INTEGER REFERENCES budget_categories(id)')
+        except:
+            pass
     
     # Add parent_id to budget_categories if not exists
     cursor.execute("PRAGMA table_info(budget_categories)")
@@ -253,6 +309,25 @@ def init_db():
             pass
     
     conn.commit()
+    
+    # Add plaid_transaction_id to transactions if missing
+    cursor.execute("PRAGMA table_info(transactions)")
+    tx_cols = [col[1] for col in cursor.fetchall()]
+    if 'plaid_transaction_id' not in tx_cols:
+        try:
+            cursor.execute('ALTER TABLE transactions ADD COLUMN plaid_transaction_id TEXT')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_transactions_plaid_id ON transactions(plaid_transaction_id)')
+        except:
+            pass
+    
+    cursor.execute("PRAGMA table_info(plaid_items)")
+    pi_cols = [col[1] for col in cursor.fetchall()]
+    if 'plaid_cursor' not in pi_cols:
+        try:
+            cursor.execute('ALTER TABLE plaid_items ADD COLUMN plaid_cursor TEXT')
+        except:
+            pass
+    
     conn.close()
 
 def get_all_payees():
@@ -263,21 +338,45 @@ def get_all_payees():
     conn.close()
     return [dict(row) for row in payees]
 
-def add_payee(name, category, account_number, notes, website=''):
+def add_payee(name, category, account_number, notes, website='', default_category_id=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO payees (name, category, account_number, notes, website) VALUES (?, ?, ?, ?, ?)',
-                   (name, category, account_number, notes, website))
+    cursor.execute('INSERT INTO payees (name, category, account_number, notes, website, default_category_id) VALUES (?, ?, ?, ?, ?, ?)',
+                   (name, category, account_number, notes, website, default_category_id))
     conn.commit()
     payee_id = cursor.lastrowid
     conn.close()
     return payee_id
 
-def update_payee(id, name, category, account_number, notes, website=''):
+def update_payee(id, name, category, account_number, notes, website='', default_category_id=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE payees SET name=?, category=?, account_number=?, notes=?, website=? WHERE id=?',
-                   (name, category, account_number, notes, website, id))
+    cursor.execute('UPDATE payees SET name=?, category=?, account_number=?, notes=?, website=?, default_category_id=? WHERE id=?',
+                   (name, category, account_number, notes, website, default_category_id, id))
+    conn.commit()
+    conn.close()
+    sync_payee_name_to_bills(id)
+
+def get_payee(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM payees WHERE id=?', (id,))
+    payee = cursor.fetchone()
+    conn.close()
+    return dict(payee) if payee else None
+
+def get_payee_by_name(name):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM payees WHERE name=?', (name,))
+    payee = cursor.fetchone()
+    conn.close()
+    return dict(payee) if payee else None
+
+def sync_payee_name_to_bills(payee_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE bills SET payee_name = (SELECT name FROM payees WHERE payees.id = bills.payee_id) WHERE payee_id = ?', (payee_id,))
     conn.commit()
     conn.close()
 
@@ -308,7 +407,7 @@ def rename_payee_category(old_name, new_name):
 def get_all_bank_accounts():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM bank_accounts WHERE is_active=1 ORDER BY name')
+    cursor.execute('SELECT * FROM bank_accounts WHERE is_active=1 ORDER BY COALESCE(institution, name), name')
     accounts = cursor.fetchall()
     conn.close()
     return [dict(row) for row in accounts]
@@ -321,19 +420,19 @@ def get_bank_account(id):
     conn.close()
     return dict(account) if account else None
 
-def add_bank_account(name, account_type, institution, account_number_last4, current_balance, website='', is_income_account=0):
+def add_bank_account(name, account_type, institution, account_number_last4, current_balance, website='', is_income_account=0, plaid_account_id=None, plaid_item_id=None, interest_rate=0):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO bank_accounts (name, account_type, institution, account_number_last4, current_balance, website, is_income_account) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                   (name, account_type, institution, account_number_last4, current_balance, website, is_income_account))
+    cursor.execute('INSERT INTO bank_accounts (name, account_type, institution, account_number_last4, current_balance, website, is_income_account, plaid_account_id, plaid_item_id, interest_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                   (name, account_type, institution, account_number_last4, current_balance, website, is_income_account, plaid_account_id, plaid_item_id, interest_rate))
     conn.commit()
     conn.close()
 
-def update_bank_account(id, name, account_type, institution, account_number_last4, current_balance, website='', is_income_account=0):
+def update_bank_account(id, name, account_type, institution, account_number_last4, current_balance, website='', is_income_account=0, interest_rate=0):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE bank_accounts SET name=?, account_type=?, institution=?, account_number_last4=?, current_balance=?, website=?, is_income_account=? WHERE id=?',
-                   (name, account_type, institution, account_number_last4, current_balance, website, is_income_account, id))
+    cursor.execute('UPDATE bank_accounts SET name=?, account_type=?, institution=?, account_number_last4=?, current_balance=?, website=?, is_income_account=?, interest_rate=? WHERE id=?',
+                   (name, account_type, institution, account_number_last4, current_balance, website, is_income_account, interest_rate, id))
     conn.commit()
     conn.close()
 
@@ -351,6 +450,21 @@ def update_bank_account_balance(id, balance):
     conn.commit()
     conn.close()
 
+def clear_bank_account_plaid(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE bank_accounts SET current_balance=0, plaid_account_id=NULL, plaid_item_id=NULL WHERE id=?', (id,))
+    cursor.execute('DELETE FROM transactions WHERE account_id=?', (id,))
+    conn.commit()
+    conn.close()
+
+def clear_credit_card_plaid(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE credit_cards SET current_balance=0, plaid_account_id=NULL, plaid_item_id=NULL WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+
 def add_transaction(account_id, date, description, amount, balance=0):
     conn = get_db()
     cursor = conn.cursor()
@@ -362,18 +476,25 @@ def add_transaction(account_id, date, description, amount, balance=0):
 def get_all_credit_cards():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM credit_cards WHERE is_active=1 ORDER BY name')
+    cursor.execute('''SELECT cc.*, COALESCE(pi.institution_name, '') as institution,
+                             (SELECT b.id FROM bills b WHERE b.credit_card_id = cc.id LIMIT 1) as linked_bill_id
+                      FROM credit_cards cc
+                      LEFT JOIN plaid_items pi ON cc.plaid_item_id = pi.id
+                      WHERE cc.is_active=1
+                      ORDER BY institution, cc.name''')
     cards = cursor.fetchall()
     conn.close()
     return [dict(row) for row in cards]
 
-def add_credit_card(name, last_four, credit_limit, current_balance, interest_rate, due_date='', website=''):
+def add_credit_card(name, last_four, credit_limit, current_balance, interest_rate, due_date='', website='', plaid_account_id=None, plaid_item_id=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO credit_cards (name, last_four, credit_limit, current_balance, interest_rate, due_date, website) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                   (name, last_four, credit_limit, current_balance, interest_rate, due_date, website))
+    cursor.execute('INSERT INTO credit_cards (name, last_four, credit_limit, current_balance, interest_rate, due_date, website, plaid_account_id, plaid_item_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                   (name, last_four, credit_limit, current_balance, interest_rate, due_date, website, plaid_account_id, plaid_item_id))
     conn.commit()
+    card_id = cursor.lastrowid
     conn.close()
+    return card_id
 
 def update_credit_card(id, name, last_four, credit_limit, current_balance, interest_rate, due_date='', website=''):
     conn = get_db()
@@ -389,6 +510,22 @@ def delete_credit_card(id):
     cursor.execute('UPDATE credit_cards SET is_active=0 WHERE id=?', (id,))
     conn.commit()
     conn.close()
+
+def get_credit_card(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM credit_cards WHERE id=?', (id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_bills_by_credit_card(credit_card_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM bills WHERE credit_card_id=?', (credit_card_id,))
+    bills = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in bills]
 
 def get_all_paychecks():
     conn = get_db()
@@ -506,7 +643,8 @@ def get_bills_with_payees():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT bills.*, payees.name as payee_name, payees.category as payee_category
+        SELECT bills.*, COALESCE(bills.payee_name, payees.name) as payee_name,
+               payees.category as payee_category, payees.default_category_id
         FROM bills
         LEFT JOIN payees ON bills.payee_id = payees.id
         ORDER BY bills.due_date ASC
@@ -519,7 +657,8 @@ def get_unpaid_bills():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT bills.*, payees.name as payee_name, payees.category as payee_category
+        SELECT bills.*, COALESCE(bills.payee_name, payees.name) as payee_name,
+               payees.category as payee_category, payees.default_category_id
         FROM bills
         LEFT JOIN payees ON bills.payee_id = payees.id
         WHERE bills.is_paid = 0
@@ -529,19 +668,19 @@ def get_unpaid_bills():
     conn.close()
     return [dict(row) for row in bills]
 
-def add_bill(payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id=None, account=None):
+def add_bill(payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id=None, account=None, payee_name=None, credit_card_id=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO bills (payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                   (payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id, account))
+    cursor.execute('INSERT INTO bills (payee_id, payee_name, amount, due_date, is_recurring, recurrence_type, notes, category_id, account, credit_card_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                   (payee_id, payee_name, amount, due_date, is_recurring, recurrence_type, notes, category_id, account, credit_card_id))
     conn.commit()
     conn.close()
 
-def update_bill(id, payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id=None, account=None):
+def update_bill(id, payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id=None, account=None, payee_name=None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE bills SET payee_id=?, amount=?, due_date=?, is_recurring=?, recurrence_type=?, notes=?, category_id=?, account=? WHERE id=?',
-                   (payee_id, amount, due_date, is_recurring, recurrence_type, notes, category_id, account, id))
+    cursor.execute('UPDATE bills SET payee_id=?, payee_name=?, amount=?, due_date=?, is_recurring=?, recurrence_type=?, notes=?, category_id=?, account=? WHERE id=?',
+                   (payee_id, payee_name, amount, due_date, is_recurring, recurrence_type, notes, category_id, account, id))
     conn.commit()
     conn.close()
 
@@ -1050,3 +1189,69 @@ def has_users():
     count = cursor.fetchone()['count']
     conn.close()
     return count > 0
+
+def add_plaid_item(access_token, item_id='', institution_name=''):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO plaid_items (access_token, item_id, institution_name) VALUES (?, ?, ?)',
+                   (access_token, item_id, institution_name))
+    conn.commit()
+    item_pk = cursor.lastrowid
+    conn.close()
+    return item_pk
+
+def get_plaid_items():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM plaid_items ORDER BY id')
+    items = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in items]
+
+def delete_plaid_item(item_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM plaid_items WHERE id = ?', (item_id,))
+    cursor.execute('UPDATE bank_accounts SET plaid_account_id = NULL, plaid_item_id = NULL WHERE plaid_item_id = ?', (item_id,))
+    cursor.execute('UPDATE credit_cards SET plaid_account_id = NULL, plaid_item_id = NULL WHERE plaid_item_id = ?', (item_id,))
+    conn.commit()
+    conn.close()
+
+def update_plaid_cursor(item_pk, cursor_val):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE plaid_items SET plaid_cursor = ? WHERE id = ?', (cursor_val, item_pk))
+    conn.commit()
+    conn.close()
+
+def get_accounts_by_plaid_item(item_pk):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, plaid_account_id, name, current_balance FROM bank_accounts WHERE plaid_item_id = ? AND is_active = 1', (item_pk,))
+    banks = [dict(r) for r in cursor.fetchall()]
+    cursor.execute('SELECT id, plaid_account_id, name, current_balance FROM credit_cards WHERE plaid_item_id = ? AND is_active = 1', (item_pk,))
+    cards = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return banks + cards
+
+def upsert_plaid_transaction(local_account_id, plaid_tx_id, date, description, amount, running_balance):
+    conn = get_db()
+    cursor = conn.cursor()
+    existing = cursor.execute('SELECT id FROM transactions WHERE plaid_transaction_id = ?', (plaid_tx_id,)).fetchone()
+    if existing:
+        cursor.execute('''UPDATE transactions SET transaction_date=?, description=?, amount=?, running_balance=?
+                          WHERE plaid_transaction_id=?''',
+                       (date, description, amount, running_balance, plaid_tx_id))
+    else:
+        cursor.execute('''INSERT INTO transactions (account_id, transaction_date, description, amount, running_balance, plaid_transaction_id)
+                          VALUES (?, ?, ?, ?, ?, ?)''',
+                       (local_account_id, date, description, amount, running_balance, plaid_tx_id))
+    conn.commit()
+    conn.close()
+
+def delete_plaid_transaction(plaid_tx_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM transactions WHERE plaid_transaction_id = ?', (plaid_tx_id,))
+    conn.commit()
+    conn.close()

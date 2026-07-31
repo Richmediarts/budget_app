@@ -1,6 +1,27 @@
 # Database
 *.db
+*.db.backup
+*.db.backup2
 DATA/budget_app/*.db
+
+# Secrets
+plaid_config.json
+
+# Exports
+*_export.csv
+
+# Stray file
+budget_db
+
+# Personal financial documents
+*.pdf
+
+# Uploads
+uploads/
+
+# Logs
+*.log
+app.log
 
 # Python
 __pycache__/

@@ -4,6 +4,9 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+<div class="text-center mb-4">
+    <img src="{{ url_for('static', filename='images/web-app-manifest-512x512.png') }}" alt="Budget App" style="max-width: 120px; height: auto;">
+</div>
 <div class="row g-3">
     <div class="col-sm-6 col-lg-4">
         <a href="{{ url_for('bank_accounts') }}" class="text-decoration-none">
@@ -132,9 +135,9 @@
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header">
-                <a href="{{ url_for('bills') }}" class="text-decoration-none text-white">
-                    <h5><i class="bi bi-receipt"></i> Bills Due Before Next Paycheck</h5>
-                </a>
+<a href="{{ url_for('bills') }}" class="text-decoration-none">
+    <h5><i class="bi bi-receipt"></i> Bills Due Before Next Paycheck</h5>
+</a>
             </div>
             <div class="card-body">
                 {% if stats.next_paycheck_date %}

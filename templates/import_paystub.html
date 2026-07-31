@@ -37,6 +37,7 @@
             </div>
             <div class="card-body">
                 <h6 class="text-muted border-bottom pb-2 mb-3">Summary</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-4">
                     <tr><th class="w-50">Employee Name</th><td>{{ parsed_data.employee_name or 'N/A' }}</td></tr>
                     <tr><th>Employee ID</th><td>{{ parsed_data.employee_id or 'N/A' }}</td></tr>
@@ -47,8 +48,10 @@
                     <tr><th>Gross Pay</th><td>${{ "%.2f"|format(parsed_data.gross_pay|default(0)) }}</td></tr>
                     <tr><th>Net Pay</th><td>${{ "%.2f"|format(parsed_data.net_pay|default(0)) }}</td></tr>
                 </table>
+                </div>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Earnings</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
@@ -68,8 +71,10 @@
                     <tr><td>Group Term Life</td><td>${{ "%.2f"|format(parsed_data.group_term_life) }}</td><td>${{ "%.2f"|format(parsed_data.group_term_life_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
+                </div>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Employee Taxes</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
@@ -83,8 +88,10 @@
                     <tr><td>Medicare</td><td>${{ "%.2f"|format(parsed_data.medicare) }}</td><td>${{ "%.2f"|format(parsed_data.medicare_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
+                </div>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Pre-Tax Deductions</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
@@ -104,8 +111,10 @@
                     <tr><td>ADD Insurance</td><td>${{ "%.2f"|format(parsed_data.add_insurance) }}</td><td>${{ "%.2f"|format(parsed_data.add_insurance_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
+                </div>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Post-Tax Deductions</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
@@ -119,8 +128,10 @@
                     <tr><td>Dependent Life Insurance</td><td>${{ "%.2f"|format(parsed_data.dependent_life) }}</td><td>${{ "%.2f"|format(parsed_data.dependent_life_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
+                </div>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">Employer Benefits</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                     <thead><tr><th>Description</th><th>Amount</th><th>YTD</th></tr></thead>
                     <tbody>
@@ -128,13 +139,16 @@
                     <tr><td>401K Employer Match</td><td>${{ "%.2f"|format(parsed_data.employer_match) }}</td><td>${{ "%.2f"|format(parsed_data.employer_match_ytd|default(0)) }}</td></tr>{% endif %}
                     </tbody>
                 </table>
+                </div>
 
                 <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">YTD Summary</h6>
+                <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                     <tr><th class="w-50">Gross Pay YTD</th><td>${{ "%.2f"|format(parsed_data.gross_pay_ytd|default(0)) }}</td></tr>
                     <tr><th>Net Pay YTD</th><td>${{ "%.2f"|format(parsed_data.net_pay_ytd|default(0)) }}</td></tr>
                     <tr><th>Hours YTD</th><td>{{ parsed_data.hours_worked_ytd or '0' }}</td></tr>
                 </table>
+                </div>
             </div>
         </div>
         {% elif parsed_data %}

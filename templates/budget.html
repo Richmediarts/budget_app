@@ -58,9 +58,17 @@
                 <span class="budget-header-amount">${{ "%.2f"|format(parent_totals[parent.id]['budget']) }} budgeted</span>
             </div>
         </div>
-        <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); addExpenseToCategory({{ parent.id }})">
-            <i class="bi bi-plus"></i> Add Expense
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-light" onclick='event.stopPropagation(); editParentCategory({{ parent.id }}, {{ parent.name|tojson }}, {{ parent.monthly_limit }}, {{ parent.color|tojson }}, {{ parent.get('actual_spent') or 0 }}, {{ parent.get('due_date', '')|tojson }}, {{ parent.get('notes', '')|tojson }})' title="Edit category">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-light" onclick='event.stopPropagation(); addSubcategory({{ parent.id }}, {{ parent.name|tojson }}, {{ parent.color|tojson }})' title="Add sub-category">
+                <i class="bi bi-folder-plus"></i>
+            </button>
+            <button class="btn btn-sm btn-light" onclick="event.stopPropagation(); addExpenseToCategory({{ parent.id }})">
+                <i class="bi bi-plus"></i> Add Expense
+            </button>
+        </div>
     </div>
     <div class="collapse" id="cat-body-{{ parent.id }}">
         {% set parent_expenses = bills_by_category[parent.id] if parent.id in bills_by_category else [] %}
@@ -80,48 +88,6 @@
             </div>
         </div>
 
-        {% if parent.children %}
-        <div class="mb-3 ps-3 border-start border-2" style="border-color: {{ parent.color }} !important;">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="text-muted mb-0">Sub-categories</h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); addSubcategory({{ parent.id }}, '{{ parent.name }}', '{{ parent.color }}')">
-                    <i class="bi bi-plus"></i> Add
-                </button>
-            </div>
-            {% for child in parent.children %}
-            {% set child_expenses = bills_by_category[child.id] if child.id in bills_by_category else [] %}
-            {% set child_actual = 0 %}
-            {% for expense in child_expenses %}
-            {% set child_actual = child_actual + (expense.amount if expense.is_paid else 0) %}
-            {% endfor %}
-            <div class="d-flex justify-content-between align-items-center py-1">
-                <div>
-                    <span class="color-dot" style="background-color: {{ child.color }};"></span>
-                    <small class="subcat-name">{{ child.name }}</small>
-                </div>
-                <div class="text-end">
-                    <small class="text-muted">${{ "%.2f"|format(child.monthly_limit) }} budgeted</small>
-                    <button class="btn btn-sm btn-outline-light ms-1" onclick="addExpenseToCategory({{ child.id }})" title="Add expense">
-                        <i class="bi bi-plus"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-light ms-1" onclick="event.stopPropagation(); editSubcategory({{ child.id }}, '{{ child.name }}', {{ child.monthly_limit }}, '{{ child.color }}')" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger ms-1" onclick="event.stopPropagation(); deleteSubcategory({{ child.id }}, '{{ child.name }}')" title="Delete">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-            {% if child_actual > 0 or child_expenses %}
-            <div class="progress mb-2" style="height: 4px;">
-                <div class="progress-bar {% if child.monthly_limit > 0 and child_actual / child.monthly_limit > 0.9 %}bg-danger{% elif child.monthly_limit > 0 and child_actual / child.monthly_limit > 0.7 %}bg-warning{% else %}bg-success{% endif %}" 
-                     style="width: {{ [100, (child_actual / child.monthly_limit * 100)|round]|min if child.monthly_limit > 0 else 0 }}%"></div>
-            </div>
-            {% endif %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
         <div class="table-responsive">
             <table class="table table-sm mb-0">
                 <thead>
@@ -138,7 +104,10 @@
                 <tbody>
                     {% for expense in parent_expenses %}
                     <tr data-expense-id="{{ expense.id }}">
-                        <td><a href="{{ url_for('bills') }}?bill_id={{ expense.id }}" class="text-decoration-none">{{ expense.payee_name or 'Unknown' }}</a></td>
+                        <td>
+                            <span class="editable-payee" data-expense-id="{{ expense.id }}" data-field="payee_name" contenteditable="true" style="cursor: text;">{{ expense.payee_name or 'Unknown' }}</span>
+                            <a href="{{ url_for('bills') }}?bill_id={{ expense.id }}" class="text-decoration-none ms-1" title="View bill details"><i class="bi bi-box-arrow-up-right small"></i></a>
+                        </td>
                         <td class="editable-cell" data-expense-id="{{ expense.id }}" data-field="due_date" style="cursor: pointer;">
                             {{ expense.due_date or '-' }}
                         </td>
@@ -148,17 +117,13 @@
                         <td class="text-end {% if expense.is_paid %}text-success{% endif %}">
                             {% if expense.is_paid %}${{ "%.2f"|format(expense.amount) }}{% else %}-{% endif %}
                         </td>
-                        <td class="text-end">{{ "$0.00" if expense.is_paid else "$%.2f"|format(expense.amount) }}</td>
-                        <td>{{ expense.account or '-' }}</td>
+                        <td class="text-end remaining-cell" data-expense-id="{{ expense.id }}">{{ "$0.00" if expense.is_paid else "$%.2f"|format(expense.amount) }}</td>
+                        <td class="editable-cell" data-expense-id="{{ expense.id }}" data-field="account" style="cursor: pointer;">{{ expense.account or '-' }}</td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
-                                {% if not expense.is_paid %}
-                                <form action="{{ url_for('mark_bill_paid', id=expense.id) }}" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mark as paid?')">
-                                        <i class="bi bi-check-circle"></i>
-                                    </button>
-                                </form>
-                                {% endif %}
+                                <button class="btn btn-sm {% if expense.is_paid %}btn-outline-secondary{% else %}btn-success{% endif %} paid-toggle" data-expense-id="{{ expense.id }}" data-paid="{{ '1' if expense.is_paid else '0' }}" title="{% if expense.is_paid %}Mark as unpaid{% else %}Mark as paid{% endif %}">
+                                    <i class="bi {% if expense.is_paid %}bi-arrow-counterclockwise{% else %}bi-check-circle{% endif %}"></i>
+                                </button>
                                 <button class="btn btn-outline-primary btn-sm" onclick="editExpense({{ expense.id }})">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -174,25 +139,45 @@
                     {% if parent.children %}
                         {% for child in parent.children %}
                             {% set child_expenses = bills_by_category[child.id] if child.id in bills_by_category else [] %}
+                            {% set child_actual = child.get('actual_spent')|float if child.get('actual_spent') else 0 %}
+                            {% for expense in child_expenses %}
+                            {% set child_actual = child_actual + (expense.amount if expense.is_paid else 0) %}
+                            {% endfor %}
+                            {% set child_rem = child.monthly_limit - child_actual %}
+                            <tr class="subcat-header">
+                                <td colspan="7" style="padding: 8px 8px 0 8px;">
+                                    <div class="d-flex justify-content-between align-items-center" style="background: {{ child.color }}15; border-left: 3px solid {{ child.color }}; padding: 6px 10px; border-radius: 4px;">
+                                        <div>
+                                            <span class="color-dot" style="background-color: {{ child.color }};"></span>
+                                            <strong>{{ child.name }}</strong>
+                                            <small class="text-muted ms-2">Budget: ${{ "%.2f"|format(child.monthly_limit) }} | Actual: ${{ "%.2f"|format(child_actual) }} | Remaining: <span class="{% if child_rem < 0 %}text-danger{% else %}text-success{% endif %}">${{ "%.2f"|format(child_rem) }}</span></small>
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary btn-sm" onclick='editSubcategory({{ child.id }}, {{ child.name|tojson }}, {{ child.monthly_limit }}, {{ child.color|tojson }}, {{ child.get('actual_spent') or 0 }})' title="Edit sub-category">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" onclick='deleteSubcategory({{ child.id }}, {{ child.name|tojson }})' title="Delete sub-category">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
                             {% for expense in child_expenses %}
                             <tr data-expense-id="{{ expense.id }}" style="background: rgba(255,255,255,0.02);">
-                                <td style="padding-left: 2rem;"><small><a href="{{ url_for('bills') }}?bill_id={{ expense.id }}" class="text-decoration-none">└─ {{ expense.payee_name or 'Unknown' }}</a></small></td>
-                                <td><small>{{ expense.due_date or '-' }}</small></td>
-                                <td class="text-end"><small>${{ "%.2f"|format(expense.amount) }}</small></td>
+                                <td style="padding-left: 2rem;"><small class="subcat-name"><span class="color-dot" style="background-color: {{ child.color }};"></span><span class="editable-payee" data-expense-id="{{ expense.id }}" data-field="payee_name" contenteditable="true" style="cursor: text;">{{ expense.payee_name or 'Unknown' }}</span><a href="{{ url_for('bills') }}?bill_id={{ expense.id }}" class="text-decoration-none ms-1" title="View bill details"><i class="bi bi-box-arrow-up-right small"></i></a></small></td>
+                                <td><small class="editable-cell" data-expense-id="{{ expense.id }}" data-field="due_date" style="cursor: pointer;">{{ expense.due_date or '-' }}</small></td>
+                                <td class="text-end"><small class="editable-cell" data-expense-id="{{ expense.id }}" data-field="amount" style="cursor: pointer;">${{ "%.2f"|format(expense.amount) }}</small></td>
                                 <td class="text-end {% if expense.is_paid %}text-success{% endif %}">
                                     <small>{% if expense.is_paid %}${{ "%.2f"|format(expense.amount) }}{% else %}-{% endif %}</small>
                                 </td>
-                                <td class="text-end"><small>{{ "$0.00" if expense.is_paid else "$%.2f"|format(expense.amount) }}</small></td>
-                                <td><small>{{ expense.account or '-' }}</small></td>
+                                <td class="text-end remaining-cell" data-expense-id="{{ expense.id }}"><small>{{ "$0.00" if expense.is_paid else "$%.2f"|format(expense.amount) }}</small></td>
+                                <td><small class="editable-cell" data-expense-id="{{ expense.id }}" data-field="account" style="cursor: pointer;">{{ expense.account or '-' }}</small></td>
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm">
-                                        {% if not expense.is_paid %}
-                                        <form action="{{ url_for('mark_bill_paid', id=expense.id) }}" method="POST" style="display:inline;">
-                                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mark as paid?')">
-                                                <i class="bi bi-check-circle"></i>
-                                            </button>
-                                        </form>
-                                        {% endif %}
+                                        <button class="btn btn-sm {% if expense.is_paid %}btn-outline-secondary{% else %}btn-success{% endif %} paid-toggle" data-expense-id="{{ expense.id }}" data-paid="{{ '1' if expense.is_paid else '0' }}" title="{% if expense.is_paid %}Mark as unpaid{% else %}Mark as paid{% endif %}">
+                                            <i class="bi {% if expense.is_paid %}bi-arrow-counterclockwise{% else %}bi-check-circle{% endif %}"></i>
+                                        </button>
                                         <button class="btn btn-outline-primary btn-sm" onclick="editExpense({{ expense.id }})">
                                             <i class="bi bi-pencil"></i>
                                         </button>
@@ -220,11 +205,64 @@
 {% endfor %}
 </div>
 
+{% if uncategorized_bills %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-warning"></i> Uncategorized Expenses ({{ uncategorized_bills|length }})</h5>
+                <small class="text-muted">Assign a category to include in budget tracking</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Payee</th>
+                                <th>Due Date</th>
+                                <th class="text-end">Amount</th>
+                                <th>Category</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in uncategorized_bills %}
+                            <tr>
+                                <td>{{ bill.payee_name or 'Unknown' }}</td>
+                                <td>{{ bill.due_date }}</td>
+                                <td class="text-end">${{ "%.2f"|format(bill.amount) }}</td>
+                                <td>
+                                    <select class="form-select form-select-sm category-assign" data-bill-id="{{ bill.id }}">
+                                        <option value="">-- Assign Category --</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-success" onclick="assignCategory({{ bill.id }})">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row mt-3">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5>Budget Summary</h5>
+                <a href="{{ url_for('export_budget') }}" class="btn btn-success btn-sm">
+                    <i class="bi bi-file-earmark-excel"></i> Export
+                </a>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -253,7 +291,7 @@
                                 {% if parent.children %}
                                     {% for child in parent.children %}
                                     {% set child_expenses = bills_by_category[child.id] if child.id in bills_by_category else [] %}
-                                    {% set child_actual = 0 %}
+                                    {% set child_actual = child.get('actual_spent')|float if child.get('actual_spent') else 0 %}
                                     {% for expense in child_expenses %}
                                     {% set child_actual = child_actual + (expense.amount if expense.is_paid else 0) %}
                                     {% endfor %}
@@ -261,6 +299,9 @@
                                         <td style="padding-left: 2.5rem;">
                                             <span class="color-dot" style="background-color: {{ child.color }};"></span>
                                             └─ {{ child.name }}
+                                            <button class="btn btn-link btn-sm p-0 ms-1" style="line-height: 1; vertical-align: baseline; font-size: 0.7rem;" onclick='editSubcategory({{ child.id }}, {{ child.name|tojson }}, {{ child.monthly_limit }}, {{ child.color|tojson }}, {{ child.get('actual_spent') or 0 }})' title="Edit sub-category">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
                                         </td>
                                         <td class="text-end">${{ "%.2f"|format(child.monthly_limit) }}</td>
                                         <td class="text-end">${{ "%.2f"|format(child_actual) }}</td>
@@ -290,7 +331,8 @@
 <script>
 const category_options = {{ category_options|tojson }};
 const bills = {{ all_bills|tojson }};
-
+const payees = {{ payees|tojson }};
+const bankAccounts = {{ bank_accounts|tojson }};
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.editable-cell').forEach(cell => {
         cell.addEventListener('click', function() {
@@ -341,6 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             cell.innerHTML = newValue || '-';
                         }
+                        updateBillsData(expenseId, field, newValue);
                         updateCategoryProgress();
                     } else {
                         alert('Error saving: ' + (data.error || 'Unknown error'));
@@ -365,10 +408,116 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // Inline Payee Editing
+    document.querySelectorAll('.editable-payee').forEach(el => {
+        el.addEventListener('blur', function() {
+            const expenseId = this.dataset.expenseId;
+            const newName = this.textContent.trim();
+            if (!newName) { this.textContent = 'Unknown'; return; }
+            const bill = bills.find(b => b.id === parseInt(expenseId));
+            if (bill) bill.payee_name = newName;
+            const formData = new FormData();
+            formData.append('payee_name', newName);
+            fetch(`/update_bill_ajax/${expenseId}`, {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            }).catch(() => location.reload());
+        });
+        el.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+            if (e.key === 'Escape') { location.reload(); }
+        });
+    });
+    
+    // Inline Paid Toggle
+    document.querySelectorAll('.paid-toggle').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const expenseId = this.dataset.expenseId;
+            const wasPaid = this.dataset.paid === '1';
+            const newPaid = wasPaid ? 0 : 1;
+            const bill = bills.find(b => b.id === parseInt(expenseId));
+            if (bill) bill.is_paid = newPaid;
+            
+            updateCategoryProgress();
+            
+            const formData = new FormData();
+            formData.append('is_paid', newPaid.toString());
+            fetch(`/update_bill_ajax/${expenseId}`, {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) location.reload();
+            })
+            .catch(() => location.reload());
+        });
+    });
 });
 
+function updateBillsData(expenseId, field, value) {
+    const bill = bills.find(b => b.id === expenseId);
+    if (!bill) return;
+    if (field === 'amount') {
+        const num = parseFloat(value) || 0;
+        bill.amount = num;
+        if (!bill.is_paid) {
+            document.querySelectorAll(`.remaining-cell[data-expense-id="${expenseId}"]`)
+                .forEach(c => c.innerHTML = '$' + num.toFixed(2));
+        }
+    }
+    if (field === 'due_date') bill.due_date = value;
+    if (field === 'account') bill.account = value;
+}
+
 function updateCategoryProgress() {
-    location.reload();
+    document.querySelectorAll('[id^="cat-body-"]').forEach(body => {
+        const id = body.id.replace('cat-body-', '');
+        const catBills = bills.filter(b => b.category_id === parseInt(id));
+        const spent = catBills.filter(b => b.is_paid).reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+        const budget = catBills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+        
+        const statLabels = body.closest('.card').querySelectorAll('.budget-stat-value');
+        if (statLabels.length >= 2) {
+            statLabels[0].textContent = '$' + spent.toFixed(2);
+            statLabels[1].textContent = '$' + (budget - spent).toFixed(2);
+        }
+        
+        const progressBar = body.closest('.card').querySelector('.progress-bar');
+        if (progressBar) {
+            const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
+            progressBar.style.width = pct + '%';
+            progressBar.className = 'progress-bar';
+            if (budget > 0 && spent / budget > 0.9) progressBar.classList.add('bg-danger');
+            else if (budget > 0 && spent / budget > 0.7) progressBar.classList.add('bg-warning');
+            else progressBar.classList.add('bg-success');
+        }
+    });
+    
+    document.querySelectorAll('.paid-toggle').forEach(btn => {
+        const eid = parseInt(btn.dataset.expenseId);
+        const bill = bills.find(b => b.id === eid);
+        if (!bill) return;
+        const isPaid = bill.is_paid;
+        const row = btn.closest('tr');
+        if (row) {
+            const actualCell = row.querySelector('td:nth-child(4)');
+            const remainingCell = row.querySelector('.remaining-cell');
+            if (actualCell) {
+                actualCell.innerHTML = isPaid ? '$' + (parseFloat(bill.amount) || 0).toFixed(2) : '-';
+                actualCell.className = 'text-end' + (isPaid ? ' text-success' : '');
+            }
+            if (remainingCell) {
+                remainingCell.innerHTML = isPaid ? '$0.00' : '$' + (parseFloat(bill.amount) || 0).toFixed(2);
+            }
+        }
+        btn.className = 'btn btn-sm ' + (isPaid ? 'btn-outline-secondary' : 'btn-success') + ' paid-toggle';
+        btn.dataset.paid = isPaid ? '1' : '0';
+        btn.title = isPaid ? 'Mark as unpaid' : 'Mark as paid';
+        btn.innerHTML = '<i class="bi ' + (isPaid ? 'bi-arrow-counterclockwise' : 'bi-check-circle') + '"></i>';
+    });
 }
 
 function toggleCategory(id) {
@@ -405,6 +554,13 @@ function editExpense(id) {
                     </div>
                     <form action="/update_bill/${bill.id}" method="POST">
                         <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Payee</label>
+                                <select name="payee_id" class="form-select">
+                                    <option value="">-- Select Payee --</option>
+                                    ${payees.map(p => `<option value="${p.id}" ${p.id === bill.payee_id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                                </select>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label">Amount</label>
                                 <div class="input-group">
@@ -503,7 +659,8 @@ function saveSubcategory() {
     .catch(() => alert('Error adding subcategory'));
 }
 
-function editSubcategory(id, name, limit, color) {
+function editSubcategory(id, name, limit, color, actual) {
+    actual = actual || 0;
     const modal = `
         <div class="modal fade" id="editSubcatModal" tabindex="-1">
             <div class="modal-dialog">
@@ -524,6 +681,14 @@ function editSubcategory(id, name, limit, color) {
                                 <span class="input-group-text">$</span>
                                 <input type="number" step="0.01" id="editSubcatLimit" class="form-control" value="${limit}">
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Actual Spent (manual entry)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" id="editSubcatActual" class="form-control" value="${actual}">
+                            </div>
+                            <small class="text-muted">Combined with paid bills to calculate total Actual.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Color</label>
@@ -547,12 +712,13 @@ function updateSubcategory() {
     const id = document.getElementById('editSubcatId').value;
     const name = document.getElementById('editSubcatName').value.trim();
     const limit = parseFloat(document.getElementById('editSubcatLimit').value) || 0;
+    const actual = parseFloat(document.getElementById('editSubcatActual').value) || 0;
     const color = document.getElementById('editSubcatColor').value;
     if (!name) { alert('Name is required'); return; }
     fetch('/api/update_subcategory/' + id, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: name, monthly_limit: limit, color: color})
+        body: JSON.stringify({name: name, monthly_limit: limit, actual_spent: actual, color: color})
     })
     .then(r => r.json())
     .then(d => { if (d.success) location.reload(); else alert(d.error); })
@@ -569,6 +735,84 @@ function deleteSubcategory(id, name) {
     .catch(() => alert('Error deleting subcategory'));
 }
 
+function editParentCategory(id, name, limit, color, actual, dueDate, notes) {
+    actual = actual || 0;
+    dueDate = dueDate || '';
+    notes = notes || '';
+    const modal = `
+        <div class="modal fade" id="editParentCatModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Category</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editParentCatId" value="${id}">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" id="editParentCatName" class="form-control" value="${name}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Monthly Limit</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" id="editParentCatLimit" class="form-control" value="${limit}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Actual Spent (manual entry)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" id="editParentCatActual" class="form-control" value="${actual}">
+                            </div>
+                            <small class="text-muted">Combined with paid bills to calculate total Actual.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" id="editParentCatDueDate" class="form-control" value="${dueDate}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea id="editParentCatNotes" class="form-control" rows="2">${notes}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Color</label>
+                            <input type="color" id="editParentCatColor" class="form-control form-control-color" value="${color}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="updateParentCategory()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    const existing = document.getElementById('editParentCatModal');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', modal);
+    new bootstrap.Modal(document.getElementById('editParentCatModal')).show();
+}
+
+function updateParentCategory() {
+    const id = document.getElementById('editParentCatId').value;
+    const name = document.getElementById('editParentCatName').value.trim();
+    const limit = parseFloat(document.getElementById('editParentCatLimit').value) || 0;
+    const actual = parseFloat(document.getElementById('editParentCatActual').value) || 0;
+    const dueDate = document.getElementById('editParentCatDueDate').value;
+    const notes = document.getElementById('editParentCatNotes').value.trim();
+    const color = document.getElementById('editParentCatColor').value;
+    if (!name) { alert('Name is required'); return; }
+    fetch('/api/update_category/' + id, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name, monthly_limit: limit, actual_spent: actual, color: color, due_date: dueDate, notes: notes})
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) location.reload(); else alert(d.error); })
+    .catch(() => alert('Error updating category'));
+}
+
 function addExpenseToCategory(catId) {
     const modal = `
         <div class="modal fade" id="addExpenseModal" tabindex="-1">
@@ -583,9 +827,11 @@ function addExpenseToCategory(catId) {
                             <input type="hidden" name="category_id" value="${catId}">
                             <div class="mb-3">
                                 <label class="form-label">Payee</label>
-                                <select name="payee_id" class="form-select">
-                                    <option value="">-- Select Payee --</option>
-                                </select>
+                                <input type="text" name="payee_name" class="form-control" list="payeeList" placeholder="Type to search or enter new payee..." autocomplete="off">
+                                <input type="hidden" name="payee_id" value="">
+                                <datalist id="payeeList">
+                                    ${payees.map(p => `<option value="${p.name}" data-id="${p.id}">`).join('')}
+                                </datalist>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Amount</label>
@@ -619,6 +865,51 @@ function addExpenseToCategory(catId) {
     document.body.insertAdjacentHTML('beforeend', modal);
     const modalInstance = new bootstrap.Modal(document.getElementById('addExpenseModal'));
     modalInstance.show();
+    
+    const payeeInput = document.getElementById('addExpenseModal').querySelector('input[name="payee_name"]');
+    const payeeIdHidden = document.getElementById('addExpenseModal').querySelector('input[name="payee_id"]');
+    const payeeList = document.getElementById('payeeList');
+    
+    payeeInput.addEventListener('input', function() {
+        const match = Array.from(payeeList.options).find(opt => opt.value === this.value);
+        if (match) {
+            payeeIdHidden.value = match.dataset.id;
+        } else {
+            payeeIdHidden.value = '';
+        }
+    });
+}
+
+function assignCategory(billId) {
+    const select = document.querySelector(`.category-assign[data-bill-id="${billId}"]`);
+    if (!select) return;
+    const categoryId = select.value;
+    if (!categoryId) {
+        alert('Please select a category first.');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('category_id', categoryId);
+    fetch(`/assign_bill_category/${billId}`, {
+        method: 'POST',
+        body: new URLSearchParams(formData)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            select.closest('tr').remove();
+            const remaining = document.querySelectorAll('.category-assign').length;
+            const header = document.querySelector('.card.border-warning .card-header h5');
+            if (header) header.innerHTML = `<i class="bi bi-exclamation-triangle text-warning"></i> Uncategorized Expenses (${remaining})`;
+            if (remaining === 0) {
+                document.querySelector('.card.border-warning')?.remove();
+            }
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown'));
+        }
+    })
+    .catch(() => alert('Error assigning category'));
 }
 </script>
 {% endblock %}
